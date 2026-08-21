@@ -1,89 +1,56 @@
-"use client";
-
-import { use, useEffect, useState } from "react";
-import Link from "next/link";
-import { ArrowLeft, CarFront, MapPin, Sparkles, ShieldCheck } from "lucide-react";
-import { BookingForm, type BookingExtraOption } from "@/components/booking-form";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
-import { useLanguage } from "@/lib/i18n";
+import { VehicleDetailClient, type Vehicle } from "@/components/vehicle-detail-client";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
 
-interface Vehicle {
-  id: string;
-  make: string;
-  model: string;
-  year: number;
-  description?: string | null;
-  location_city: string;
-  country_code: string;
-  daily_price: number;
-  base_currency: string;
-  host_type: "individual" | "business";
-  transmission?: string | null;
-  seats?: number | null;
-  has_ac?: boolean;
-  status: string;
-  promoted?: boolean;
-  fuel_policy?: string | null;
-  cleaning_policy?: string | null;
+interface PageProps {
+  params: Promise<{ vehicleId: string }>;
 }
 
-export default function VehicleDetailPage({ params }: { params: Promise<{ vehicleId: string }> }) {
-  const { vehicleId } = use(params);
-  const { t } = useLanguage();
-  const [vehicle, setVehicle] = useState<Vehicle | null | undefined>(undefined);
-  const [extras, setExtras] = useState<BookingExtraOption[]>([]);
+async function loadVehicle(vehicleId: string): Promise<Vehicle | null> {
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.from("vehicles").select("*").eq("id", vehicleId).maybeSingle();
+  if (error || !data) return null;
 
-  useEffect(() => {
-    fetch(`/api/vehicles/${vehicleId}`).then(async (response) => {
-      const result = await response.json() as { vehicle?: Vehicle };
-      setVehicle(response.ok ? result.vehicle ?? null : null);
-    }).catch(() => setVehicle(null));
+  const { data: verificationRecord } = await supabase
+    .from("verification_records")
+    .select("id")
+    .eq("vehicle_id", vehicleId)
+    .eq("verification_type", "vehicle")
+    .eq("status", "verified")
+    .maybeSingle();
 
-    fetch(`/api/vehicles/${vehicleId}/extras`).then(async (response) => {
-      const result = await response.json() as { extras?: BookingExtraOption[] };
-      if (response.ok) setExtras(result.extras ?? []);
-    }).catch(() => {});
-  }, [vehicleId]);
+  return { ...data, verified: Boolean(verificationRecord) } as Vehicle;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { vehicleId } = await params;
+  const vehicle = await loadVehicle(vehicleId);
+  if (!vehicle) return { title: "Vehicle not found | yoRento" };
+
+  const title = `${vehicle.make} ${vehicle.model} ${vehicle.year} in ${vehicle.location_city} | yoRento`;
+  const description = `Rent a ${vehicle.year} ${vehicle.make} ${vehicle.model} in ${vehicle.location_city}, Dominican Republic — ${formatMoney(vehicle.daily_price, vehicle.base_currency)} per day on yoRento.`;
+  const ogImageUrl = `/vehicles/${vehicleId}/opengraph-image`;
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `${vehicle.make} ${vehicle.model}` }] },
+    twitter: { card: "summary_large_image", title, description, images: [ogImageUrl] },
+  };
+}
+
+export default async function VehicleDetailPage({ params }: PageProps) {
+  const { vehicleId } = await params;
+  const vehicle = await loadVehicle(vehicleId);
+  if (!vehicle) notFound();
 
   return (
     <>
       <AppHeader />
-      <main className="workflow-page">
-      <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/search"><ArrowLeft size={16} /> {t("backLinkSearch")}</Link></div>
-        {vehicle === undefined && <p className="workflow-kicker">{t("loadingVehicles")}</p>}
-        {vehicle === null && <p className="workflow-error">{t("searchNoResultsTitle")}</p>}
-        {vehicle && (
-          <section className="vehicle-detail">
-            <div className="vehicle-detail-media">
-              <CarFront size={56} />
-              {vehicle.promoted && <span className="verified-badge promoted-badge"><Sparkles size={13} /> {t("promotedBadge")}</span>}
-            </div>
-            <div className="vehicle-detail-body">
-              <p className="workflow-kicker">{vehicle.host_type === "individual" ? t("vehiclePersonalOwner") : t("vehicleBusinessLabel")}</p>
-              <h1>{vehicle.make} {vehicle.model}</h1>
-              <p className="vehicle-detail-meta"><MapPin size={15} /> {vehicle.location_city}, {vehicle.country_code} <span>&middot;</span> {vehicle.year}</p>
-              {vehicle.description && <p className="workflow-intro">{vehicle.description}</p>}
-              <div className="vehicle-meta">
-                <span>{vehicle.transmission ?? t("filterAutomatic")}</span>
-                {vehicle.seats ? <span>{vehicle.seats} {t("seatsLabel").toLowerCase()}</span> : null}
-                {vehicle.has_ac ? <span>{t("filterAc")}</span> : null}
-              </div>
-              <p className="vehicle-detail-price"><strong>{formatMoney(vehicle.daily_price, vehicle.base_currency)}</strong> {t("perDaySuffix")}</p>
-              <div className="vehicle-detail-trust"><ShieldCheck size={16} /> {t("vehiclePricingNote")}</div>
-              {(vehicle.fuel_policy || vehicle.cleaning_policy) && (
-                <div className="admin-reasons" style={{ marginBottom: 18 }}>
-                  {vehicle.fuel_policy && <span>{t("fuelPolicyLabel")}: {vehicle.fuel_policy === "as_delivered" ? t("fuelPolicyAsDelivered") : t("fuelPolicyFull")}</span>}
-                  {vehicle.cleaning_policy && <span>{t("cleaningPolicyLabel")}: {vehicle.cleaning_policy}</span>}
-                </div>
-              )}
-              <BookingForm vehicleId={vehicle.id} status={vehicle.status} extras={extras} />
-            </div>
-          </section>
-        )}
-      </div>
-      </main>
+      <VehicleDetailClient vehicleId={vehicleId} initialVehicle={vehicle} />
     </>
   );
 }

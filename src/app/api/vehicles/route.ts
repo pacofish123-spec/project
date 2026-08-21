@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCapability } from "@/lib/authorization";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { attachVerifiedFlag } from "@/lib/vehicle-verification";
 
 interface VehicleInput {
   hostType?: "individual" | "business";
@@ -17,6 +18,7 @@ interface VehicleInput {
   hasAc?: boolean;
   fuelPolicy?: string;
   cleaningPolicy?: string;
+  amenities?: string[];
   latitude?: number;
   longitude?: number;
 }
@@ -77,7 +79,9 @@ export async function GET(request: Request) {
         .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
     }
 
-    return NextResponse.json({ vehicles });
+    const vehiclesWithVerification = await attachVerifiedFlag(supabase, vehicles);
+
+    return NextResponse.json({ vehicles: vehiclesWithVerification });
   } catch {
     return NextResponse.json({ error: "Marketplace data is not configured yet." }, { status: 503 });
   }
@@ -117,16 +121,21 @@ export async function POST(request: Request) {
       has_ac: body.hasAc ?? false,
       fuel_policy: body.fuelPolicy ?? null,
       cleaning_policy: body.cleaningPolicy ?? null,
+      amenities: body.amenities ?? [],
       latitude: body.latitude ?? null,
       longitude: body.longitude ?? null,
       status: "draft",
     }).select().single();
 
-    if (error) return NextResponse.json({ error: "Unable to create vehicle." }, { status: 500 });
+    if (error) {
+      console.error("POST /api/vehicles insert error:", error);
+      return NextResponse.json({ error: "Unable to create vehicle." }, { status: 500 });
+    }
     return NextResponse.json({ vehicle: data }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "REQUEST_FAILED";
     const status = message === "AUTHENTICATION_REQUIRED" ? 401 : message === "CAPABILITY_REQUIRED" ? 403 : 500;
-    return NextResponse.json({ error: "Unable to create vehicle." }, { status });
+    if (status === 500) console.error("POST /api/vehicles error:", error);
+    return NextResponse.json({ error: status === 401 ? "Sign in to list a vehicle." : status === 403 ? "You're not authorized to list a vehicle here." : "Unable to create vehicle." }, { status });
   }
 }

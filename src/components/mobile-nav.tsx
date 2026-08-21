@@ -18,14 +18,22 @@ function tabForPath(pathname: string) {
   return tabs.find((tab) => pathname === tab.root || (tab.root !== "/" && pathname.startsWith(tab.root))) ?? tabs[0];
 }
 
+// Screens with their own full-screen layout (admin console, auth forms,
+// onboarding) shouldn't have the renter tab bar floating over them.
+const hiddenRoots = ["/admin", "/sign-in", "/sign-up", "/auth", "/onboarding", "/recover"];
+
 export function MobileNav() {
   const { t } = useLanguage();
   const pathname = usePathname();
   const router = useRouter();
   const activeTab = tabForPath(pathname);
+  const hidden = hiddenRoots.some((root) => pathname === root || pathname.startsWith(`${root}/`));
   useEffect(() => {
+    if (hidden) return;
     sessionStorage.setItem(`yorento-tab:${activeTab.key}`, pathname);
-  }, [activeTab.key, pathname]);
+  }, [activeTab.key, pathname, hidden]);
+
+  if (hidden) return null;
 
   function navigate(tab: (typeof tabs)[number]) {
     if (tab.key === activeTab.key) {

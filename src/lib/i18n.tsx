@@ -26,6 +26,20 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored && (supportedLanguages as readonly string[]).includes(stored)) {
       queueMicrotask(() => setLanguageState(stored as SupportedLanguage));
+      return;
+    }
+    // No explicit choice saved yet — infer from the browser's language
+    // list (most-preferred first) rather than always opening in English.
+    // Deliberately not persisted to storage: an explicit pick from the
+    // language switcher always wins and sticks, but an unvisited browser
+    // should keep re-detecting on every visit until the person actually
+    // chooses one.
+    const browserLanguages = window.navigator.languages ?? [window.navigator.language];
+    const detected = browserLanguages
+      .map((lang) => lang.slice(0, 2).toLowerCase())
+      .find((lang) => (supportedLanguages as readonly string[]).includes(lang)) as SupportedLanguage | undefined;
+    if (detected && detected !== "en") {
+      queueMicrotask(() => setLanguageState(detected));
     }
   }, []);
 

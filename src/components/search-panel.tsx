@@ -1,12 +1,13 @@
 "use client";
 
-import { CalendarDays, CarFront, ChevronDown, Check, MapPin, Search } from "lucide-react";
+import { CalendarDays, CarFront, ChevronDown, Check, MapPin, Plane, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CalendarPicker } from "@/components/calendar-picker";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
 import { useOutsideClose } from "@/lib/use-outside-close";
 import { drDestinations } from "@/lib/destinations";
+import { defaultDateRange } from "@/lib/default-date-range";
 
 export interface SearchPanelValues {
   location: string;
@@ -29,6 +30,16 @@ interface SearchPanelProps {
 
 const destinationNames = drDestinations.map((destination) => destination.name);
 
+// Real DR airports, pinned above the destination list as one-tap picks.
+// Each maps to the real city it sits in/next to (PUJ is Punta Cana itself;
+// SDQ/Las Américas is just outside Santo Domingo) so the tap still runs a
+// working search — it's a friendlier label on an existing destination,
+// not a separate fake location with no vehicles behind it.
+const airportQuickPicks = [
+  { city: "Punta Cana", labelKey: "airportPuntaCanaLabel" as const },
+  { city: "Santo Domingo", labelKey: "airportSantoDomingoLabel" as const },
+];
+
 export function SearchPanel({ initialLocation, initialStartDate = "", initialEndDate = "", initialVehicleType, onSearch }: SearchPanelProps) {
   const { t, language } = useLanguage();
   const vehicleTypes = [t("anyVehicleLabel"), t("vehicleTypeEconomy"), t("vehicleTypeSuv"), t("vehicleTypeLuxury"), t("vehicleTypeVan"), t("vehicleTypePickup")];
@@ -37,10 +48,12 @@ export function SearchPanel({ initialLocation, initialStartDate = "", initialEnd
   const [datesOpen, setDatesOpen] = useState(false);
   const [vehicleOpen, setVehicleOpen] = useState(false);
   const [location, setLocation] = useState(initialLocation || destinationNames[0]);
+  const [locationLabel, setLocationLabel] = useState(initialLocation || destinationNames[0]);
   const [locationQuery, setLocationQuery] = useState("");
   const [vehicleType, setVehicleType] = useState(initialVehicleType || vehicleTypes[0]);
-  const [startDate, setStartDate] = useState(initialStartDate);
-  const [endDate, setEndDate] = useState(initialEndDate);
+  const defaultDates = initialStartDate || initialEndDate ? null : defaultDateRange();
+  const [startDate, setStartDate] = useState(initialStartDate || defaultDates?.start || "");
+  const [endDate, setEndDate] = useState(initialEndDate || defaultDates?.end || "");
   const [dateError, setDateError] = useState("");
 
   const locationRef = useOutsideClose(locationOpen, () => setLocationOpen(false));
@@ -55,8 +68,9 @@ export function SearchPanel({ initialLocation, initialStartDate = "", initialEnd
   const dateSummary = startDate && endDate ? `${readableDate(startDate)} - ${readableDate(endDate)}` : startDate ? `${readableDate(startDate)} - ${t("returnDateWord")}` : t("addDatesLabel");
   const filteredLocations = destinationNames.filter((option) => option.toLowerCase().includes(locationQuery.toLowerCase()));
 
-  function chooseLocation(option: string) {
+  function chooseLocation(option: string, label = option) {
     setLocation(option);
+    setLocationLabel(label);
     setLocationQuery("");
     setLocationOpen(false);
     onSearch?.({ location: option, startDate, endDate, vehicleType });
@@ -84,11 +98,17 @@ export function SearchPanel({ initialLocation, initialStartDate = "", initialEnd
 
   return <div className="search-panel" aria-label="Search vehicles">
     <div className="search-dropdown" ref={locationRef}>
-      <button className="search-field" type="button" onClick={() => setLocationOpen((value) => !value)}><MapPin size={18} /><span><small>{t("whereLabel")}</small><strong>{location}</strong></span><ChevronDown size={16} /></button>
+      <button className="search-field" type="button" onClick={() => setLocationOpen((value) => !value)}><MapPin size={18} /><span><small>{t("whereLabel")}</small><strong>{locationLabel}</strong></span><ChevronDown size={16} /></button>
       {locationOpen && (
         <div className="search-dropdown-panel">
           <input className="location-search" value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder={t("searchCountryPlaceholder")} aria-label="Search destinations" autoFocus />
-          <div className="drawer-options">{filteredLocations.map((option, index) => <button className={`select-option ${index === 0 && !locationQuery ? "featured-location" : ""}`} type="button" key={option} onClick={() => chooseLocation(option)}>{index === 0 && !locationQuery && <MapPin size={17} />}{option}{location === option && <Check size={18} />}</button>)}</div>
+          {!locationQuery && (
+            <div className="airport-quick-picks">
+              <small>{t("airportQuickPicksLabel")}</small>
+              {airportQuickPicks.map((airport) => <button className="select-option airport-option" type="button" key={airport.city} onClick={() => chooseLocation(airport.city, t(airport.labelKey))}><Plane size={16} />{t(airport.labelKey)}{locationLabel === t(airport.labelKey) && <Check size={18} />}</button>)}
+            </div>
+          )}
+          <div className="drawer-options">{filteredLocations.map((option, index) => <button className={`select-option ${index === 0 && !locationQuery ? "featured-location" : ""}`} type="button" key={option} onClick={() => chooseLocation(option)}>{index === 0 && !locationQuery && <MapPin size={17} />}{option}{location === option && locationLabel === option && <Check size={18} />}</button>)}</div>
         </div>
       )}
     </div>

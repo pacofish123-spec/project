@@ -114,7 +114,7 @@ export function AuthMenu() {
       {signedIn && firstName && <span className="auth-greeting">{t("authWelcomeGreeting", { name: firstName })}</span>}
       {signedIn && isAdmin && <Link href="/admin" className="admin-nav-badge" onClick={() => setOpen(false)}><ShieldCheck size={13} /> Admin</Link>}
       <button
-        className={`profile-button ${signedIn ? "profile-button-signed-in" : ""}`}
+        className={`profile-button ${signedIn ? "profile-button-signed-in" : "profile-button-signed-out"}`}
         type="button"
         aria-haspopup="true"
         aria-expanded={open}
@@ -122,6 +122,7 @@ export function AuthMenu() {
         onClick={() => setOpen((value) => !value)}
       >
         <UserRound size={18} />
+        {!signedIn && <span className="auth-signin-label">{t("signIn")}</span>}
       </button>
 
       {open && !signedIn && (

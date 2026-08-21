@@ -46,3 +46,18 @@ export function findDestinationPhoto(location: string | null | undefined): strin
   const match = drDestinations.find((destination) => destination.name.toLowerCase() === location.trim().toLowerCase());
   return match?.photo ?? fallback;
 }
+
+// URL-safe slug for per-destination pages/OG metadata — strips accents
+// (Bávaro -> bavaro, San Cristóbal -> san-cristobal) so links stay ASCII.
+export function slugifyDestination(name: string): string {
+  return name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
+export function findDestinationBySlug(slug: string): Destination | undefined {
+  return drDestinations.find((destination) => slugifyDestination(destination.name) === slug);
+}

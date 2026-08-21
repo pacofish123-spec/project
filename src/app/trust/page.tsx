@@ -20,6 +20,15 @@ export default function TrustPage() {
             <p><Check size={18} /> {t("trustItem2")}</p>
             <p><Check size={18} /> {t("trustItem3")}</p>
           </div>
+
+          <h2 className="faq-title">{t("faqTitle")}</h2>
+          <div className="faq-list">
+            <details className="faq-item"><summary>{t("faqQ1")}</summary><p>{t("faqA1")}</p></details>
+            <details className="faq-item"><summary>{t("faqQ2")}</summary><p>{t("faqA2")}</p></details>
+            <details className="faq-item"><summary>{t("faqQ3")}</summary><p>{t("faqA3")}</p></details>
+            <details className="faq-item"><summary>{t("faqQ4")}</summary><p>{t("faqA4")}</p></details>
+          </div>
+
           <div className="workflow-lang-bar"><LanguageSwitcher /></div>
         </section>
       </div>

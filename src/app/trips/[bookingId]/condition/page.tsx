@@ -20,7 +20,8 @@ interface Report {
 
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
 
-function PhotoGallery({ paths }: { paths: string[] }) {
+function PhotoGallery({ paths, stage }: { paths: string[]; stage: "pickup" | "return" }) {
+  const { t } = useLanguage();
   const [urls, setUrls] = useState<string[]>([]);
 
   useEffect(() => {
@@ -33,9 +34,10 @@ function PhotoGallery({ paths }: { paths: string[] }) {
   }, [paths]);
 
   if (urls.length === 0) return null;
+  const stageLabel = stage === "pickup" ? t("conditionReportPickup") : t("conditionReportReturn");
   return (
     <div className="condition-photo-grid">
-      {urls.map((url) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt="" /></a>)}
+      {urls.map((url, index) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt={`${stageLabel} ${index + 1}`} /></a>)}
     </div>
   );
 }
@@ -117,7 +119,7 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
           </label>
           {pendingPhotoPaths.length > 0 && <p className="admin-row-meta">{pendingPhotoPaths.length} {t("addPhotosLabel").toLowerCase()}</p>}
           {error && <p className="workflow-error">{error}</p>}
-          <PhotoGallery paths={report?.photo_paths ?? []} />
+          <PhotoGallery paths={report?.photo_paths ?? []} stage={stage} />
           <button className="workflow-submit coral" type="submit" disabled={busy || uploading}><Gauge size={16} /> {t("saveReport")}</button>
         </form>
       ) : (
@@ -127,7 +129,7 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
           {report?.notes && <div><span>{t("notesLabel")}</span><span>{report.notes}</span></div>}
         </div>
       )}
-      {!canEdit && <PhotoGallery paths={report?.photo_paths ?? []} />}
+      {!canEdit && <PhotoGallery paths={report?.photo_paths ?? []} stage={stage} />}
       {report && !isOwnReport && (
         report.acknowledged_at
           ? <p className="admin-row-meta" style={{ marginTop: 12 }}><Check size={13} style={{ verticalAlign: "-2px" }} /> {t("reportAcknowledged")}</p>

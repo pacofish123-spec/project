@@ -1,109 +1,74 @@
-"use client";
-
-import Link from "next/link";
-import { Suspense, useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
-import { ArrowLeft, ArrowRight, CarFront, LocateFixed } from "lucide-react";
-import { SearchPanel } from "@/components/search-panel";
-import { FiltersButton, type SearchFilters } from "@/components/filters-button";
-import { VehicleCard, type VehicleCardData } from "@/components/vehicle-card";
-import { AppHeader } from "@/components/app-header";
-import { useLanguage } from "@/lib/i18n";
-import { useCurrencyRates } from "@/lib/use-currency-rates";
+import type { Metadata } from "next";
+import { SearchResultsClient } from "@/components/search-results-client";
+import type { VehicleCardData } from "@/components/vehicle-card";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { attachVerifiedFlag } from "@/lib/vehicle-verification";
+import { defaultDateRange } from "@/lib/default-date-range";
 import { drDestinations, findDestinationPhoto } from "@/lib/destinations";
 
-const emptyFilters: SearchFilters = { transmission: "", minPrice: "", maxPrice: "", seats: "" };
+// Live filtering (dates, price, "near me") happens client-side same as
+// before — this only seeds the very first paint with results matching
+// whatever URL was actually requested, so a shared/indexed search link
+// shows real cars immediately instead of an empty grid.
+export const dynamic = "force-dynamic";
 
-function SearchResults() {
-  const { t } = useLanguage();
-  const rates = useCurrencyRates();
-  const searchParams = useSearchParams();
-  const initialDestination = searchParams.get("location") ?? searchParams.get("destination") ?? drDestinations[0].name;
-  const [destination, setDestination] = useState(initialDestination);
-  const [vehicles, setVehicles] = useState<VehicleCardData[] | null>(null);
-  const [error, setError] = useState("");
-  const [nearMe, setNearMe] = useState<{ lat: number; lng: number } | null>(null);
-  const [locating, setLocating] = useState(false);
-  const [dates, setDates] = useState({ startDate: searchParams.get("startDate") ?? "", endDate: searchParams.get("endDate") ?? "" });
-  const [filters, setFilters] = useState<SearchFilters>(emptyFilters);
-
-  useEffect(() => {
-    const params = new URLSearchParams();
-    if (destination) params.set("city", destination);
-    if (dates.startDate) params.set("startDate", dates.startDate);
-    if (dates.endDate) params.set("endDate", dates.endDate);
-    if (nearMe) { params.set("lat", String(nearMe.lat)); params.set("lng", String(nearMe.lng)); }
-    if (filters.transmission) params.set("transmission", filters.transmission);
-    if (filters.minPrice) params.set("minPrice", filters.minPrice);
-    if (filters.maxPrice) params.set("maxPrice", filters.maxPrice);
-    if (filters.seats) params.set("seats", filters.seats);
-    fetch(`/api/vehicles?${params.toString()}`).then(async (response) => {
-      const result = await response.json() as { vehicles?: VehicleCardData[]; error?: string };
-      if (!response.ok) { setError(result.error ?? "Unable to load vehicles."); setVehicles([]); return; }
-      setVehicles(result.vehicles ?? []);
-    }).catch(() => { setError("Unable to load vehicles."); setVehicles([]); });
-  }, [destination, dates, nearMe, filters]);
-
-  function findNearMe() {
-    if (!navigator.geolocation) { setError(t("locationDenied")); return; }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => { setNearMe({ lat: position.coords.latitude, lng: position.coords.longitude }); setLocating(false); },
-      () => { setError(t("locationDenied")); setLocating(false); },
-      { enableHighAccuracy: false, timeout: 8000 },
-    );
-  }
-
-  return (
-    <>
-      <AppHeader />
-      <main className="workflow-page">
-      <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkToBrowse")}</Link></div>
-
-        <section className="destination-hero" style={{ backgroundImage: `url(${findDestinationPhoto(destination)})` }}>
-          <div>
-            <p className="workflow-kicker" style={{ color: "#f5b196" }}>{t("searchKicker")}</p>
-            <h1>{destination}</h1>
-            <p>{t("searchIntro")}</p>
-          </div>
-        </section>
-
-        <div className="destination-search-panel">
-          <SearchPanel
-            initialLocation={destination}
-            initialStartDate={dates.startDate}
-            initialEndDate={dates.endDate}
-            onSearch={(values) => { setDestination(values.location); setDates({ startDate: values.startDate, endDate: values.endDate }); }}
-          />
-        </div>
-
-        <div className="results-toolbar">
-          <FiltersButton filters={filters} onFiltersChange={setFilters} />
-          <div className="admin-filters">
-            <button className={nearMe ? "active" : ""} type="button" disabled={locating} onClick={findNearMe}>
-              <LocateFixed size={13} style={{ verticalAlign: "-2px", marginRight: 5 }} />{t("nearMeButton")}
-            </button>
-          </div>
-        </div>
-
-        {error && <p className="workflow-error">{error}</p>}
-        {vehicles === null && <p className="workflow-kicker">{t("loadingVehicles")}</p>}
-        {vehicles !== null && vehicles.length > 0 && <div className="vehicle-grid">{vehicles.map((vehicle) => <VehicleCard vehicle={vehicle} rates={rates} key={vehicle.id} />)}</div>}
-        {vehicles !== null && vehicles.length === 0 && (
-          <section className="empty-results">
-            <CarFront size={32} />
-            <h2>{t("searchNoResultsTitle")}</h2>
-            <p>{t("searchNoResultsBody")}</p>
-            <Link className="workflow-submit coral" href="/host">{t("listAVehicle")} <ArrowRight size={16} /></Link>
-          </section>
-        )}
-      </div>
-      </main>
-    </>
-  );
+interface PageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default function SearchPage() {
-  return <Suspense fallback={null}><SearchResults /></Suspense>;
+function firstValue(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+async function loadInitialVehicles(city: string, params: Awaited<PageProps["searchParams"]>): Promise<VehicleCardData[]> {
+  const supabase = await createSupabaseServerClient();
+  let query = supabase.from("vehicles").select("*").eq("status", "published");
+  if (city) query = query.ilike("location_city", `%${city}%`);
+  const transmission = firstValue(params.transmission);
+  const minPrice = firstValue(params.minPrice);
+  const maxPrice = firstValue(params.maxPrice);
+  const seats = firstValue(params.seats);
+  if (transmission) query = query.eq("transmission", transmission);
+  if (minPrice && Number.isFinite(Number(minPrice))) query = query.gte("daily_price", Number(minPrice));
+  if (maxPrice && Number.isFinite(Number(maxPrice))) query = query.lte("daily_price", Number(maxPrice));
+  if (seats && Number.isFinite(Number(seats))) query = query.gte("seats", Number(seats));
+
+  const { data } = await query.order("promoted", { ascending: false }).order("created_at", { ascending: false }).limit(24);
+  return attachVerifiedFlag(supabase, (data ?? []) as VehicleCardData[]);
+}
+
+export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
+  const params = await searchParams;
+  const destination = firstValue(params.location) || firstValue(params.destination);
+  const title = destination ? `Cars in ${destination}, Dominican Republic | yoRento` : "Search cars | yoRento";
+  const description = destination
+    ? `Compare car rentals in ${destination}, Dominican Republic on yoRento — real listings from personal owners and rental businesses, prices shown upfront.`
+    : "Compare car rentals across the Dominican Republic on yoRento — real listings from personal owners and rental businesses, prices shown upfront.";
+  const photo = findDestinationPhoto(destination || null);
+
+  return {
+    title,
+    description,
+    openGraph: { title, description, images: [{ url: photo, width: 1600, height: 900, alt: destination || "yoRento" }] },
+    twitter: { card: "summary_large_image", title, description, images: [photo] },
+  };
+}
+
+export default async function SearchPage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const destination = firstValue(params.location) || firstValue(params.destination) || drDestinations[0].name;
+  const fallbackDates = defaultDateRange();
+  const startDate = firstValue(params.startDate) || fallbackDates.start;
+  const endDate = firstValue(params.endDate) || fallbackDates.end;
+
+  const vehicles = await loadInitialVehicles(destination, params);
+
+  return (
+    <SearchResultsClient
+      initialDestination={destination}
+      initialStartDate={startDate}
+      initialEndDate={endDate}
+      initialVehicles={vehicles}
+    />
+  );
 }
