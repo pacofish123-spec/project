@@ -73,10 +73,11 @@ export default function TripsPage() {
       <main className="workflow-page">
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link>{!bookings && <Link className="workflow-link" href="/sign-in">{t("signIn")}</Link>}</div>
-        <section className="workflow-card wide">
+        <section className="search-results-head destination-detail-head" style={{ backgroundImage: "linear-gradient(180deg, rgba(46,20,10,.18), rgba(46,20,10,.74)), url(https://images.unsplash.com/photo-1650593963138-1d2e64afd70b?auto=format&fit=crop&w=1800&q=80)" }}>
           <p className="workflow-kicker">{t("tripsKicker")}</p>
           <h1>{t("tripsTitleLine1")}<br /><em>{t("tripsTitleLine2")}</em></h1>
-
+        </section>
+        <section className="workflow-card wide" style={{ marginTop: 24 }}>
           {message && (
             <div className="dashboard-message">
               <ClipboardList size={22} />

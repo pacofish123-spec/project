@@ -11,7 +11,7 @@ export default function ProfilePage() {
   return (
     <>
       <AppHeader />
-      <main className="workflow-page">
+      <main className="workflow-page has-photo tint-ocean" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1592455639374-b7ad0189dfbb?auto=format&fit=crop&w=1800&q=80)" }}>
         <div className="page-width">
           <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link></div>
           <section className="workflow-card">

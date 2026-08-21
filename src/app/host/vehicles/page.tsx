@@ -105,7 +105,7 @@ export default function HostVehiclesPage() {
   return (
     <>
       <AppHeader />
-      <main className="workflow-page">
+      <main className="workflow-page tint-wash-coral">
         <div className="page-width">
           <div className="workflow-nav"><Link className="workflow-back" href="/host/dashboard"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link></div>
           <section className="dashboard-head">

@@ -1,6 +1,10 @@
 .workflow-page { min-height: 100vh; padding: max(32px, env(safe-area-inset-top)) 0 max(80px, env(safe-area-inset-bottom)); background: var(--cream); }
+.workflow-page.tint-wash-ocean { background: linear-gradient(180deg, color-mix(in srgb, var(--ocean) 12%, var(--cream)) 0%, var(--cream) 360px); }
+.workflow-page.tint-wash-coral { background: linear-gradient(180deg, color-mix(in srgb, var(--coral) 10%, var(--cream)) 0%, var(--cream) 360px); }
 .workflow-page.has-photo { position: relative; background-position: center; background-size: cover; isolation: isolate; }
 .workflow-page.has-photo::before { content: ""; position: absolute; inset: 0; z-index: 0; background: linear-gradient(180deg, rgba(10,34,27,.78), rgba(10,34,27,.58)); }
+.workflow-page.has-photo.tint-ocean::before { background: linear-gradient(180deg, rgba(6,38,44,.8), rgba(6,38,44,.55)); }
+.workflow-page.has-photo.tint-coral::before { background: linear-gradient(180deg, rgba(46,20,10,.8), rgba(46,20,10,.52)); }
 .workflow-page.has-photo > .page-width { position: relative; z-index: 1; }
 .workflow-page.has-photo .workflow-back { color: rgba(255,255,255,.9); }
 .workflow-page.has-photo .workflow-card { border-color: rgba(255,255,255,.2); box-shadow: 0 30px 80px rgba(0,0,0,.4); }
