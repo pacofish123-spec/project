@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, CarFront, Plus, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ArrowRight, CalendarDays, CarFront, ChevronDown, ChevronUp, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { SkeletonVehicleRows } from "@/components/skeleton";
-import { useLanguage } from "@/lib/i18n";
+import { PublicProfilePopover } from "@/components/public-profile-popover";
+import { useLanguage, localeByLanguage } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/translations";
-import { formatMoney } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
 
 interface HostVehicle {
@@ -21,6 +22,18 @@ interface HostVehicle {
   base_currency: string;
   promoted?: boolean;
   photo_paths?: string[] | null;
+}
+
+interface BookingRequest {
+  id: string;
+  vehicle_id: string;
+  status: string;
+  starts_at: string;
+  ends_at: string;
+  total: number;
+  currency: string;
+  renter_user_id: string;
+  renter_display_name?: string;
 }
 
 const vehicleStatusKey: Record<string, TranslationKey> = {
@@ -42,20 +55,30 @@ const verificationStatusKey: Record<string, TranslationKey> = {
 };
 
 export default function HostVehiclesPage() {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const [vehicles, setVehicles] = useState<HostVehicle[] | null>(null);
+  const [requests, setRequests] = useState<BookingRequest[]>([]);
   const [message, setMessage] = useState("");
   const [busyId, setBusyId] = useState("");
+  const [expandedVehicleId, setExpandedVehicleId] = useState("");
 
   const load = useCallback(() => {
     fetch("/api/host/dashboard").then(async (response) => {
-      const result = await response.json() as { vehicles?: HostVehicle[]; error?: string };
+      const result = await response.json() as { vehicles?: HostVehicle[]; requests?: BookingRequest[]; error?: string };
       if (!response.ok) { setMessage(result.error ?? t("hostDashboardSignInPrompt")); return; }
       setVehicles(result.vehicles ?? []);
+      setRequests((result.requests ?? []).filter((request) => request.status === "requested"));
     }).catch(() => setMessage(t("hostDashboardLoadError")));
   }, [t]);
 
   useEffect(() => { load(); }, [load]);
+
+  async function respond(id: string, status: "accepted" | "declined") {
+    setBusyId(id);
+    const response = await fetch(`/api/bookings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    if (response.ok) load();
+    setBusyId("");
+  }
 
   async function requestVerification(vehicleId: string) {
     setBusyId(vehicleId);
@@ -122,40 +145,71 @@ export default function HostVehiclesPage() {
             <div className="host-vehicle-list">
               {vehicles.map((vehicle) => {
                 const photoUrl = vehicle.photo_paths?.[0] ? vehiclePhotoUrl(vehicle.photo_paths[0]) : null;
+                const vehiclePendingRequests = requests.filter((request) => request.vehicle_id === vehicle.id);
+                const expanded = expandedVehicleId === vehicle.id;
                 return (
-                  <article className="host-vehicle-row" key={vehicle.id}>
-                    <div className={`host-vehicle-thumb ${photoUrl ? "" : "vehicle-image-placeholder"}`} style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}>
-                      {!photoUrl && <CarFront size={26} />}
-                    </div>
-                    <div className="host-vehicle-info">
-                      <div>
-                        <strong>{vehicle.make} {vehicle.model} {vehicle.year}</strong>
-                        <span className={`trip-status trip-status-${vehicle.status}`}>{t(vehicleStatusKey[vehicle.status] ?? "vehicleStatusDraft")}</span>
+                  <article className="host-vehicle-row-wrap" key={vehicle.id}>
+                    <div className="host-vehicle-row">
+                      <div className={`host-vehicle-thumb ${photoUrl ? "" : "vehicle-image-placeholder"}`} style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}>
+                        {!photoUrl && <CarFront size={26} />}
                       </div>
-                      <p><ShieldCheck size={13} /> {t(verificationStatusKey[vehicle.verification_status] ?? "verificationNotStarted")}<span className="host-vehicle-price">{formatMoney(vehicle.daily_price, vehicle.base_currency)} {t("perDaySuffix")}</span></p>
-                      {vehicle.promoted && <p className="host-vehicle-promoted"><Sparkles size={13} /> {t("promotedVehicleNote")}</p>}
+                      <div className="host-vehicle-info">
+                        <div>
+                          <strong>{vehicle.make} {vehicle.model} {vehicle.year}</strong>
+                          <span className={`trip-status trip-status-${vehicle.status}`}>{t(vehicleStatusKey[vehicle.status] ?? "vehicleStatusDraft")}</span>
+                          {vehiclePendingRequests.length > 0 && <span className="trip-status trip-status-pending_review">{t("hostVehiclePendingBadge", { count: vehiclePendingRequests.length })}</span>}
+                        </div>
+                        <p><ShieldCheck size={13} /> {t(verificationStatusKey[vehicle.verification_status] ?? "verificationNotStarted")}<span className="host-vehicle-price">{formatMoney(vehicle.daily_price, vehicle.base_currency)} {t("perDaySuffix")}</span></p>
+                        {vehicle.promoted && <p className="host-vehicle-promoted"><Sparkles size={13} /> {t("promotedVehicleNote")}</p>}
+                      </div>
+                      <div className="host-vehicle-actions">
+                        {vehiclePendingRequests.length > 0 && (
+                          <button className="workflow-link" type="button" onClick={() => setExpandedVehicleId(expanded ? "" : vehicle.id)}>
+                            {expanded ? <ChevronUp size={13} style={{ verticalAlign: "-2px" }} /> : <ChevronDown size={13} style={{ verticalAlign: "-2px" }} />} {t("viewPendingRequestsAction")}
+                          </button>
+                        )}
+                        <Link className="workflow-link" href={`/host/vehicles/${vehicle.id}/edit`}>{t("editVehicleAction")}</Link>
+                        {vehicle.status !== "published" && vehicle.verification_status === "not_started" && (
+                          <button className="workflow-link" type="button" disabled={busyId === vehicle.id} onClick={() => requestVerification(vehicle.id)}>
+                            {busyId === vehicle.id ? t("requestingVerification") : t("requestVerificationAction")}
+                          </button>
+                        )}
+                        {vehicle.status !== "published" && vehicle.verification_status === "verified" && (
+                          <button className="workflow-link" type="button" disabled={busyId === vehicle.id} onClick={() => publishVehicle(vehicle.id)}>
+                            {busyId === vehicle.id ? t("publishing") : t("publishAction")}
+                          </button>
+                        )}
+                        {vehicle.status !== "archived" && (
+                          <button className="workflow-link" type="button" disabled={busyId === vehicle.id} onClick={() => archiveVehicle(vehicle.id)}>
+                            {busyId === vehicle.id ? t("archivingVehicle") : t("archiveVehicleAction")}
+                          </button>
+                        )}
+                        <button className="workflow-link danger" type="button" disabled={busyId === vehicle.id} onClick={() => deleteVehicle(vehicle.id)}>
+                          {busyId === vehicle.id ? t("deletingVehicle") : t("deleteVehicleAction")}
+                        </button>
+                      </div>
                     </div>
-                    <div className="host-vehicle-actions">
-                      <Link className="workflow-link" href={`/host/vehicles/${vehicle.id}/edit`}>{t("editVehicleAction")}</Link>
-                      {vehicle.status !== "published" && vehicle.verification_status === "not_started" && (
-                        <button className="workflow-link" type="button" disabled={busyId === vehicle.id} onClick={() => requestVerification(vehicle.id)}>
-                          {busyId === vehicle.id ? t("requestingVerification") : t("requestVerificationAction")}
-                        </button>
-                      )}
-                      {vehicle.status !== "published" && vehicle.verification_status === "verified" && (
-                        <button className="workflow-link" type="button" disabled={busyId === vehicle.id} onClick={() => publishVehicle(vehicle.id)}>
-                          {busyId === vehicle.id ? t("publishing") : t("publishAction")}
-                        </button>
-                      )}
-                      {vehicle.status !== "archived" && (
-                        <button className="workflow-link" type="button" disabled={busyId === vehicle.id} onClick={() => archiveVehicle(vehicle.id)}>
-                          {busyId === vehicle.id ? t("archivingVehicle") : t("archiveVehicleAction")}
-                        </button>
-                      )}
-                      <button className="workflow-link danger" type="button" disabled={busyId === vehicle.id} onClick={() => deleteVehicle(vehicle.id)}>
-                        {busyId === vehicle.id ? t("deletingVehicle") : t("deleteVehicleAction")}
-                      </button>
-                    </div>
+                    {expanded && vehiclePendingRequests.length > 0 && (
+                      <div className="trip-list host-vehicle-requests">
+                        {vehiclePendingRequests.map((request) => (
+                          <article className="trip-card" key={request.id}>
+                            <div>
+                              <strong>{t("requestedByLabel")} <PublicProfilePopover userId={request.renter_user_id} displayName={request.renter_display_name ?? t("hostAnonymousLabel")} /></strong>
+                              <span className="trip-status">{formatMoney(request.total, request.currency)}</span>
+                            </div>
+                            <p><CalendarDays size={14} /> {formatDate(request.starts_at, localeByLanguage[language])} &ndash; {formatDate(request.ends_at, localeByLanguage[language])}</p>
+                            <div className="trip-footer">
+                              <span />
+                              <div className="trip-actions">
+                                <Link className="workflow-link" href={`/messages/${request.id}`}>{t("requestMoreInfoAction")}</Link>
+                                <button className="workflow-link" type="button" disabled={busyId === request.id} onClick={() => respond(request.id, "accepted")}>{t("hostDashboardAccept")}</button>
+                                <button className="workflow-link danger" type="button" disabled={busyId === request.id} onClick={() => respond(request.id, "declined")}>{t("hostDashboardDecline")}</button>
+                              </div>
+                            </div>
+                          </article>
+                        ))}
+                      </div>
+                    )}
                   </article>
                 );
               })}

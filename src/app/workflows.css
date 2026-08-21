@@ -219,6 +219,8 @@ html.dark .skeleton-line, html.dark .skeleton-row { background: #2b3a33; }
 .trip-footer strong { color: var(--ink); }
 .trip-actions { display: flex; gap: 14px; }
 .host-vehicle-list { display: grid; gap: 12px; margin-top: 18px; }
+.host-vehicle-requests { margin: -4px 0 0; padding: 0 0 0 18px; border-left: 2px solid #e4e8e1; }
+html.dark .host-vehicle-requests { border-color: #385047; }
 .host-vehicle-row { display: grid; grid-template-columns: 96px 1fr auto; align-items: center; gap: 18px; padding: 14px; border: 1px solid #d4dfd6; border-radius: 6px; background: var(--paper); }
 .host-vehicle-thumb { width: 96px; height: 72px; border-radius: 5px; background-position: center; background-size: cover; display: grid; place-items: center; color: rgba(255,255,255,.6); }
 .host-vehicle-info > div:first-child { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }

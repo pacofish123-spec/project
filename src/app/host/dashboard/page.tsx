@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Building2, CalendarDays, CarFront, MessageCircle
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { SkeletonTiles } from "@/components/skeleton";
+import { PublicProfilePopover } from "@/components/public-profile-popover";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
 
@@ -16,6 +17,7 @@ interface BookingRequest {
   total: number;
   platform_fee: number;
   currency: string;
+  renter_user_id: string;
   renter_display_name?: string;
   vehicles?: { make?: string; model?: string; year?: number } | null;
 }
@@ -133,15 +135,15 @@ export default function HostDashboardPage() {
                 <article className="trip-card" key={request.id}>
                   <div>
                     <strong>{request.vehicles ? `${request.vehicles.make} ${request.vehicles.model}` : "Vehicle"}</strong>
-                    <span className="trip-status">{request.renter_display_name}</span>
+                    <span className="trip-status">{t("requestedByLabel")} <PublicProfilePopover userId={request.renter_user_id} displayName={request.renter_display_name ?? t("hostAnonymousLabel")} /></span>
                   </div>
                   <p><CalendarDays size={14} /> {formatDate(request.starts_at, localeByLanguage[language])} &ndash; {formatDate(request.ends_at, localeByLanguage[language])}</p>
                   <div className="trip-footer">
                     <strong>{formatMoney(request.total, request.currency)}</strong>
                     <div className="trip-actions">
-                      <Link className="workflow-link" href={`/messages/${request.id}`}>{t("messageLink")}</Link>
+                      <Link className="workflow-link" href={`/messages/${request.id}`}>{t("requestMoreInfoAction")}</Link>
                       <button className="workflow-link" type="button" disabled={busyId === request.id} onClick={() => respond(request.id, "accepted")}>{t("hostDashboardAccept")}</button>
-                      <button className="workflow-link" type="button" disabled={busyId === request.id} onClick={() => respond(request.id, "declined")}>{t("hostDashboardDecline")}</button>
+                      <button className="workflow-link danger" type="button" disabled={busyId === request.id} onClick={() => respond(request.id, "declined")}>{t("hostDashboardDecline")}</button>
                     </div>
                   </div>
                 </article>
