@@ -33,7 +33,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
     if (error) {
       const reason = error.message ?? "";
       if (reason.includes("BOOKING_ACCESS_DENIED")) return NextResponse.json({ error: "You are not authorized to manage this booking." }, { status: 403 });
-      if (reason.includes("REPORT_PENDING_ACKNOWLEDGEMENT")) return NextResponse.json({ error: "The other party already submitted a report for this stage — acknowledge it instead of overwriting it." }, { status: 409 });
+      if (reason.includes("REPORT_ALREADY_ACKNOWLEDGED")) return NextResponse.json({ error: "This report has already been acknowledged by both sides and can't be changed." }, { status: 409 });
       if (reason.includes("BOOKING_NOT_FOUND")) return NextResponse.json({ error: "Booking not found." }, { status: 404 });
       return NextResponse.json({ error: "Unable to save this report." }, { status: 500 });
     }

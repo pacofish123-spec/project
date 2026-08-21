@@ -51,6 +51,20 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
   const [endTime, setEndTime] = useState("10:00");
   const [pickupLocation, setPickupLocation] = useState("");
   const [returnLocation, setReturnLocation] = useState("");
+  // Once the renter actively edits the return location themselves, it
+  // stops following the pick-up field — otherwise every pick-up
+  // keystroke would stomp over a drop-off spot they just chose.
+  const [returnLocationTouched, setReturnLocationTouched] = useState(false);
+
+  function handlePickupChange(value: string) {
+    setPickupLocation(value);
+    if (!returnLocationTouched) setReturnLocation(value);
+  }
+
+  function handleReturnChange(value: string) {
+    setReturnLocationTouched(true);
+    setReturnLocation(value);
+  }
   const [message, setMessage] = useState("");
   const [restoredNotice, setRestoredNotice] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -96,6 +110,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
         setEndTime(draft.endTime ?? "10:00");
         setPickupLocation(draft.pickupLocation ?? "");
         setReturnLocation(draft.returnLocation ?? "");
+        if (draft.returnLocation && draft.returnLocation !== draft.pickupLocation) setReturnLocationTouched(true);
         sessionStorage.removeItem(draftKey(vehicleId));
         setRestoredNotice(true);
       } catch {
@@ -213,8 +228,8 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
       </div>
       <p className="field-hint" style={{ margin: "-9px 0 4px" }}>{t("bookingTimeHint")}</p>
       <div className="field-grid">
-        <label>{t("bookingPickupLabel")}<LocationAutocomplete value={pickupLocation} onChange={setPickupLocation} countryCode={countryCode} placeholder={t("bookingPickupPlaceholder")} required /></label>
-        <label>{t("bookingReturnLabel")}<LocationAutocomplete value={returnLocation} onChange={setReturnLocation} countryCode={countryCode} placeholder={t("bookingReturnPlaceholder")} required /></label>
+        <label>{t("bookingPickupLabel")}<LocationAutocomplete value={pickupLocation} onChange={handlePickupChange} countryCode={countryCode} placeholder={t("bookingPickupPlaceholder")} required /></label>
+        <label>{t("bookingReturnLabel")} <span className="field-hint">{t("bookingReturnSameAsPickupHint")}</span><LocationAutocomplete value={returnLocation} onChange={handleReturnChange} countryCode={countryCode} placeholder={t("bookingReturnPlaceholder")} required /></label>
       </div>
 
       {extras.length > 0 && (

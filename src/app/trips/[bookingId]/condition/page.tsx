@@ -20,6 +20,23 @@ interface Report {
 
 const MAX_PHOTO_BYTES = 50 * 1024 * 1024;
 
+// Stored as the same 0-100 integer column it always was — just picked
+// from a fuel-gauge-shaped set of stops instead of typed as a raw
+// number nobody reads a fuel needle in anyway.
+const fuelLevelOptions = [
+  { value: 0, label: "E" },
+  { value: 25, label: "¼" },
+  { value: 50, label: "½" },
+  { value: 75, label: "¾" },
+  { value: 100, label: "F" },
+];
+
+function fuelLevelDisplay(value: number | null | undefined): string {
+  if (value == null) return "—";
+  const closest = fuelLevelOptions.reduce((best, option) => (Math.abs(option.value - value) < Math.abs(best.value - value) ? option : best));
+  return closest.label;
+}
+
 function PhotoGallery({ paths, stage }: { paths: string[]; stage: "pickup" | "return" }) {
   const { t } = useLanguage();
   const [urls, setUrls] = useState<string[]>([]);
@@ -79,7 +96,8 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
-    await fetch(`/api/bookings/${bookingId}/condition`, {
+    setError("");
+    const response = await fetch(`/api/bookings/${bookingId}/condition`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -91,6 +109,11 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
       }),
     });
     setBusy(false);
+    if (!response.ok) {
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      setError(result.error ?? t("conditionReportSaveError"));
+      return;
+    }
     setPendingPhotoPaths([]);
     onChange();
   }
@@ -109,7 +132,21 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
       {canEdit ? (
         <form className="workflow-form" onSubmit={handleSubmit}>
           <div className="field-grid">
-            <label>{t("fuelLevelLabel")}<input type="number" min="0" max="100" value={fuelLevel} onChange={(event) => setFuelLevel(event.target.value)} /></label>
+            <div className="full">
+              <span className="select-label">{t("fuelLevelLabel")}</span>
+              <div className="fuel-level-picker">
+                {fuelLevelOptions.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`fuel-level-option ${Number(fuelLevel) === option.value ? "active" : ""}`}
+                    onClick={() => setFuelLevel(String(option.value))}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
             <label>{t("mileageLabel")}<input type="number" min="0" value={mileage} onChange={(event) => setMileage(event.target.value)} /></label>
             <label className="full">{t("notesLabel")}<textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
           </div>
@@ -126,7 +163,7 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
         </form>
       ) : (
         <div className="price-breakdown">
-          <div><span>{t("fuelLevelLabel")}</span><span>{report?.fuel_level ?? "—"}%</span></div>
+          <div><span>{t("fuelLevelLabel")}</span><span>{fuelLevelDisplay(report?.fuel_level)}</span></div>
           <div><span>{t("mileageLabel")}</span><span>{report?.mileage ?? "—"}</span></div>
           {report?.notes && <div><span>{t("notesLabel")}</span><span>{report.notes}</span></div>}
         </div>
