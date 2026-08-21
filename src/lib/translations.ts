@@ -447,7 +447,7 @@ const en = {
   minPriceLabel: "Min price",
   maxPriceLabel: "Max price",
   addPhotosLabel: "Add photos",
-  photoUploadHint: "Click to choose photos — PNG or JPG, up to 25MB each",
+  photoUploadHint: "Click to choose photos — PNG or JPG, up to 50MB each",
   uploadingPhotos: "Uploading...",
   photoUploadError: "Some photos couldn't be uploaded.",
 };
@@ -901,7 +901,7 @@ const es: Record<keyof typeof en, string> = {
   minPriceLabel: "Precio mín.",
   maxPriceLabel: "Precio máx.",
   addPhotosLabel: "Agregar fotos",
-  photoUploadHint: "Toca para elegir fotos — PNG o JPG, hasta 25MB cada una",
+  photoUploadHint: "Toca para elegir fotos — PNG o JPG, hasta 50MB cada una",
   uploadingPhotos: "Subiendo...",
   photoUploadError: "Algunas fotos no se pudieron subir.",
 };
@@ -1355,7 +1355,7 @@ const fr: Record<keyof typeof en, string> = {
   minPriceLabel: "Prix min.",
   maxPriceLabel: "Prix max.",
   addPhotosLabel: "Ajouter des photos",
-  photoUploadHint: "Touchez pour choisir des photos — PNG ou JPG, jusqu'à 25 Mo chacune",
+  photoUploadHint: "Touchez pour choisir des photos — PNG ou JPG, jusqu'à 50 Mo chacune",
   uploadingPhotos: "Téléversement...",
   photoUploadError: "Certaines photos n'ont pas pu être téléversées.",
 };
