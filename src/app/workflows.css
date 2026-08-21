@@ -230,6 +230,9 @@ html.dark .host-vehicle-requests { border-color: #385047; }
 .host-vehicle-promoted { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; color: var(--coral); font-size: 11px; font-weight: 700; }
 .host-vehicle-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
 .workflow-link.danger { color: #923c27; }
+html.dark .workflow-link { color: #9fd7b5; }
+html.dark .workflow-link.danger { color: #f0958a; }
+html.dark .rating { color: #9fd7b5; }
 .user-status-actions { margin-top: 6px; flex-wrap: wrap; }
 .user-search { width: 100%; max-width: 340px; margin: 4px 0 18px; }
 .requests-card { margin-top: 18px; }
