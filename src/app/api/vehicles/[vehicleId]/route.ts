@@ -98,7 +98,18 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     const { vehicleId } = await params;
     const { supabase } = await requireUser();
 
-    const { data, error } = await supabase.from("vehicles").delete().eq("id", vehicleId).select("id, photo_paths").maybeSingle();
+    // Storage's own delete policy checks can_manage_vehicle(vehicle_id)
+    // by looking the vehicle back up — which only works while the row
+    // still exists. Clean up photos *before* deleting the row, not
+    // after (deleting first then trying to clean up left photos
+    // silently orphaned in storage, since the ownership check they
+    // depend on would already be looking up a vehicle that's gone).
+    const { data: existing } = await supabase.from("vehicles").select("photo_paths").eq("id", vehicleId).maybeSingle();
+    if (existing?.photo_paths?.length) {
+      await supabase.storage.from("vehicle-photos").remove(existing.photo_paths);
+    }
+
+    const { data, error } = await supabase.from("vehicles").delete().eq("id", vehicleId).select("id").maybeSingle();
 
     if (error) {
       // Every booking/extras/verification FK to vehicles is ON DELETE
@@ -111,10 +122,6 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Unable to delete this vehicle." }, { status: 500 });
     }
     if (!data) return NextResponse.json({ error: "You are not authorized to manage this vehicle." }, { status: 403 });
-
-    if (data.photo_paths?.length) {
-      await supabase.storage.from("vehicle-photos").remove(data.photo_paths);
-    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

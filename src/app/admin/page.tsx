@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Building2, CalendarClock, CarFront, CheckCircle2, Copy, LayoutDashboard, ShieldCheck, Users, Wallet } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, CalendarClock, CarFront, CheckCircle2, Copy, LayoutDashboard, ShieldCheck, Users, Wallet } from "lucide-react";
 import { formatDate, formatMoney } from "@/lib/format";
 
 interface Overview {
@@ -49,6 +49,25 @@ export default function AdminOverviewPage() {
   ];
   const openTasks = tasks.filter((task) => task.count > 0);
 
+  const earningsSummary = earningsByCurrency.length > 0
+    ? earningsByCurrency.map((entry) => formatMoney(entry.platformFee, entry.currency)).join(" · ")
+    : "No earnings yet";
+
+  // One card per tab in the admin nav (Overview excluded — it's this
+  // page), so every stat is a real shortcut into the tab it summarizes
+  // instead of a dead-end number.
+  const tabCards = [
+    { icon: Users, value: String(counts.users), label: "Users", href: "/admin/users" },
+    { icon: CarFront, value: `${counts.publishedVehicles} / ${counts.vehicles}`, label: "Published vehicles", href: "/admin/vehicles" },
+    { icon: Building2, value: String(counts.businesses), label: "Businesses", href: "/admin/businesses" },
+    { icon: CalendarClock, value: String(counts.bookings), label: "Bookings", href: "/admin/bookings" },
+    { icon: AlertTriangle, value: String(counts.openDisputes), label: "Open disputes", href: "/admin/disputes" },
+    { icon: ShieldCheck, value: String(pendingTasks.verificationAwaitingReview), label: "Verification requests to review", href: "/admin/verification" },
+    { icon: Copy, value: String(pendingTasks.duplicatesAwaitingReview), label: "Duplicate accounts to review", href: "/admin/duplicates" },
+    { icon: Wallet, value: earningsSummary, label: "Platform earnings", href: "/admin/earnings" },
+    { icon: BarChart3, value: "", label: "Site analytics", href: "/admin/analytics" },
+  ];
+
   return (
     <>
       <section className="workflow-card wide requests-card">
@@ -69,13 +88,12 @@ export default function AdminOverviewPage() {
       </section>
 
       <div className="dashboard-grid">
-        <div className="dashboard-tile"><Users size={20} /><strong>{counts.users}</strong><span>Users</span></div>
-        <div className="dashboard-tile"><CarFront size={20} /><strong>{counts.publishedVehicles} / {counts.vehicles}</strong><span>Published vehicles</span></div>
-        <div className="dashboard-tile"><Building2 size={20} /><strong>{counts.businesses}</strong><span>Businesses</span></div>
-        <div className="dashboard-tile"><CalendarClock size={20} /><strong>{counts.bookings}</strong><span>Bookings</span></div>
-        <div className="dashboard-tile"><AlertTriangle size={20} /><strong>{counts.openDisputes}</strong><span>Open disputes</span></div>
-        {earningsByCurrency.map((entry) => (
-          <div className="dashboard-tile" key={entry.currency}><Wallet size={20} /><strong>{formatMoney(entry.platformFee, entry.currency)}</strong><span>Platform fees earned ({entry.currency})</span></div>
+        {tabCards.map((card) => (
+          <Link className="dashboard-tile" href={card.href} key={card.href}>
+            <card.icon size={20} />
+            {card.value && <strong>{card.value}</strong>}
+            <span>{card.label}</span>
+          </Link>
         ))}
       </div>
 

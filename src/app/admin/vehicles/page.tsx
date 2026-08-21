@@ -52,6 +52,16 @@ export default function AdminVehiclesPage() {
     setBusyId("");
   }
 
+  async function deleteVehicle(id: string) {
+    if (!window.confirm("Delete this vehicle? This can't be undone.")) return;
+    setBusyId(id);
+    const response = await fetch(`/api/admin/vehicles/${id}`, { method: "DELETE" });
+    const result = await response.json().catch(() => ({})) as { error?: string };
+    if (response.ok) load();
+    else setMessage(result.error ?? "This vehicle has booking or verification history and can't be deleted.");
+    setBusyId("");
+  }
+
   const visible = useMemo(() => (vehicles ?? []).filter((vehicle) => filter === "all" || vehicle.status === filter), [vehicles, filter]);
 
   return (
@@ -80,6 +90,7 @@ export default function AdminVehiclesPage() {
                   {(nextStatusActions[vehicle.status] ?? []).map((action) => (
                     <button key={action.status} className="workflow-link" type="button" disabled={busyId === vehicle.id} onClick={() => setStatus(vehicle.id, action.status)}>{action.label}</button>
                   ))}
+                  <button className="workflow-link danger" type="button" disabled={busyId === vehicle.id} onClick={() => deleteVehicle(vehicle.id)}>Delete</button>
                 </div>
               </div>
             </article>
