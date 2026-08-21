@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Building2, CalendarDays, CarFront, MessageCircle, Plus, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Building2, CalendarDays, CarFront, MessageCircle, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
-import type { TranslationKey } from "@/lib/translations";
 
 interface BookingRequest {
   id: string;
@@ -14,6 +13,7 @@ interface BookingRequest {
   starts_at: string;
   ends_at: string;
   total: number;
+  platform_fee: number;
   currency: string;
   renter_display_name?: string;
   vehicles?: { make?: string; model?: string; year?: number } | null;
@@ -21,11 +21,7 @@ interface BookingRequest {
 
 interface HostVehicle {
   id: string;
-  make: string;
-  model: string;
-  year: number;
   status: string;
-  verification_status: string;
 }
 
 interface ExtraRequest {
@@ -44,30 +40,17 @@ interface DashboardData {
   extraRequests?: ExtraRequest[];
 }
 
-const vehicleStatusKey: Record<string, TranslationKey> = {
-  draft: "vehicleStatusDraft",
-  pending_review: "vehicleStatusPendingReview",
-  published: "vehicleStatusPublished",
-  paused: "vehicleStatusPaused",
-  archived: "vehicleStatusArchived",
-};
-
-const verificationStatusKey: Record<string, TranslationKey> = {
-  not_started: "verificationNotStarted",
-  pending: "verificationPending",
-  in_review: "verificationInReview",
-  verified: "verificationVerified",
-  failed: "verificationFailed",
-  requires_information: "verificationRequiresInformation",
-  expired: "verificationExpired",
-};
+// A trip only counts toward earnings once it's past the "would this
+// still fall through" stage — matches the exact same status filter and
+// gross/platform_fee split the admin earnings view uses, so a host's
+// number and the platform's own bookkeeping never quietly disagree.
+const EARNING_STATUSES = new Set(["accepted", "in_progress", "completed"]);
 
 export default function HostDashboardPage() {
   const { t, language } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
   const [message, setMessage] = useState(t("hostDashboardLoading"));
   const [busyId, setBusyId] = useState("");
-  const [busyVehicleId, setBusyVehicleId] = useState("");
 
   const load = useCallback(() => {
     fetch("/api/host/dashboard").then(async (response) => {
@@ -86,20 +69,6 @@ export default function HostDashboardPage() {
     setBusyId("");
   }
 
-  async function requestVerification(vehicleId: string) {
-    setBusyVehicleId(vehicleId);
-    const response = await fetch(`/api/vehicles/${vehicleId}/verification`, { method: "POST" });
-    if (response.ok) load();
-    setBusyVehicleId("");
-  }
-
-  async function publishVehicle(vehicleId: string) {
-    setBusyVehicleId(vehicleId);
-    const response = await fetch(`/api/vehicles/${vehicleId}/publish`, { method: "POST" });
-    if (response.ok) load();
-    setBusyVehicleId("");
-  }
-
   const [busyExtraKey, setBusyExtraKey] = useState("");
   async function respondToExtra(bookingId: string, extraId: string, status: "accepted" | "declined") {
     const key = `${bookingId}:${extraId}`;
@@ -110,6 +79,17 @@ export default function HostDashboardPage() {
   }
 
   const pendingRequests = (data?.requests ?? []).filter((request) => request.status === "requested");
+
+  // Net payout (gross minus the platform's cut), grouped by currency —
+  // a host's bookings are almost always one currency, but this stays
+  // correct if they're not rather than silently mixing totals.
+  const earningsByCurrency = new Map<string, number>();
+  for (const request of data?.requests ?? []) {
+    if (!EARNING_STATUSES.has(request.status)) continue;
+    const net = (Number(request.total) || 0) - (Number(request.platform_fee) || 0);
+    earningsByCurrency.set(request.currency, (earningsByCurrency.get(request.currency) ?? 0) + net);
+  }
+  const earningsLines = [...earningsByCurrency.entries()];
 
   return (
     <>
@@ -125,49 +105,18 @@ export default function HostDashboardPage() {
         {message && <div className="workflow-card dashboard-message"><ShieldCheck size={23} /><p>{message}</p><Link className="workflow-link" href="/sign-in">{t("signIn")} <ArrowRight size={14} /></Link></div>}
 
         <div className="dashboard-grid">
-          <Link className="dashboard-tile" href="/host/cars/new"><CarFront size={22} /><strong>{t("hostDashboardMyVehicles")}</strong><span>{data ? t("hostDashboardVehiclesCount", { count: data.vehicles?.length ?? 0 }) : t("hostDashboardAddFirstVehicle")}</span></Link>
+          <Link className="dashboard-tile" href="/host/vehicles"><CarFront size={22} /><strong>{t("hostDashboardMyVehicles")}</strong><span>{data ? t("hostDashboardVehiclesCount", { count: data.vehicles?.length ?? 0 }) : t("hostDashboardAddFirstVehicle")}</span></Link>
           <Link className="dashboard-tile" href="/trips"><CalendarDays size={22} /><strong>{t("hostDashboardBookingsRequests")}</strong><span>{data ? t("hostDashboardRequestsCount", { count: data.requests?.length ?? 0 }) : t("hostDashboardSignInToViewRequests")}</span></Link>
+          <div className="dashboard-tile" style={{ cursor: "default" }}>
+            <Wallet size={22} />
+            <strong>{t("hostDashboardEarnings")}</strong>
+            {earningsLines.length > 0
+              ? <span>{earningsLines.map(([currency, amount]) => formatMoney(amount, currency)).join(" · ")}</span>
+              : <span>{t("hostDashboardEarningsNone")}</span>}
+          </div>
           <Link className="dashboard-tile" href="/host/business/new"><Building2 size={22} /><strong>{t("hostDashboardBusinesses")}</strong><span>{data ? t("hostDashboardBusinessMembershipsCount", { count: data.businesses?.length ?? 0 }) : t("hostDashboardCreateOrJoinBusiness")}</span></Link>
           <Link className="dashboard-tile" href="/trust"><MessageCircle size={22} /><strong>{t("hostDashboardTrustVerification")}</strong><span>{t("hostDashboardCompleteNextRequirement")}</span></Link>
         </div>
-
-        {data && data.vehicles && data.vehicles.length > 0 && (
-          <section className="workflow-card wide requests-card">
-            <div className="workflow-actions" style={{ marginTop: 0 }}>
-              <p className="workflow-kicker" style={{ margin: 0 }}>{t("yourVehiclesHeading")}</p>
-              <Link className="workflow-link" href="/host/extras">{t("myExtrasLink")} <ArrowRight size={14} /></Link>
-            </div>
-            <div className="trip-list">
-              {data.vehicles.map((vehicle) => (
-                <article className="trip-card" key={vehicle.id}>
-                  <div>
-                    <strong>{vehicle.make} {vehicle.model} {vehicle.year}</strong>
-                    <span className={`trip-status trip-status-${vehicle.status}`}>{t(vehicleStatusKey[vehicle.status] ?? "vehicleStatusDraft")}</span>
-                  </div>
-                  <p><ShieldCheck size={14} /> {t(verificationStatusKey[vehicle.verification_status] ?? "verificationNotStarted")}</p>
-                  {vehicle.status !== "published" && (
-                    <div className="trip-footer">
-                      {vehicle.verification_status === "not_started" && (
-                        <button className="workflow-link" type="button" disabled={busyVehicleId === vehicle.id} onClick={() => requestVerification(vehicle.id)}>
-                          {busyVehicleId === vehicle.id ? t("requestingVerification") : t("requestVerificationAction")}
-                        </button>
-                      )}
-                      {vehicle.verification_status === "verified" && (
-                        <button className="workflow-submit coral" type="button" disabled={busyVehicleId === vehicle.id} onClick={() => publishVehicle(vehicle.id)}>
-                          {busyVehicleId === vehicle.id ? t("publishing") : t("publishAction")}
-                        </button>
-                      )}
-                      {vehicle.verification_status !== "not_started" && vehicle.verification_status !== "verified" && (
-                        <span className="trip-status">{t("publishNotVerifiedHint")}</span>
-                      )}
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
-        {data && (!data.vehicles || data.vehicles.length === 0) && <p className="legal-note">{t("noVehiclesYet")}</p>}
 
         {pendingRequests.length > 0 && (
           <section className="workflow-card wide requests-card">
