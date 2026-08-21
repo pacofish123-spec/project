@@ -24,7 +24,7 @@ function PhotoGallery({ paths }: { paths: string[] }) {
   const [urls, setUrls] = useState<string[]>([]);
 
   useEffect(() => {
-    if (paths.length === 0) { setUrls([]); return; }
+    if (paths.length === 0) { queueMicrotask(() => setUrls([])); return; }
     const supabase = createSupabaseBrowserClient();
     if (!supabase) return;
     Promise.all(paths.map((path) => supabase.storage.from("condition-reports").createSignedUrl(path, 3600))).then((results) => {

@@ -118,6 +118,7 @@ html.dark .message-composer input { border-color: #385047; }
 
 .trip-list { display: grid; gap: 12px; margin-top: 18px; }
 .trip-card { display: grid; gap: 8px; padding: 18px; border: 1px solid #d4dfd6; border-radius: 6px; background: var(--paper); }
+.app-placeholder-tile { opacity: .55; }
 .pending-task-card { text-decoration: none; transition: border-color .15s ease; }
 .pending-task-card:hover { border-color: var(--coral); }
 .pending-task-card > div { align-items: center; }

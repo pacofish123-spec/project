@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 // counts, earnings summary). Everything else is alphabetical.
 const tabs = [
   { href: "/admin", label: "Overview" },
+  { href: "/admin/analytics", label: "Analytics" },
   { href: "/admin/bookings", label: "Bookings" },
   { href: "/admin/businesses", label: "Businesses" },
   { href: "/admin/disputes", label: "Disputes" },

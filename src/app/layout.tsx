@@ -3,6 +3,7 @@ import "./globals.css";
 import "./workflows.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { PageTransition } from "@/components/page-transition";
+import { PageViewTracker } from "@/components/page-view-tracker";
 import { LanguageProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
@@ -27,5 +28,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return <html lang="en" className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider><PageTransition>{children}</PageTransition></LanguageProvider></ThemeProvider></body></html>;
+  return <html lang="en" className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider><PageViewTracker /><PageTransition>{children}</PageTransition></LanguageProvider></ThemeProvider></body></html>;
 }
