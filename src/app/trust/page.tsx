@@ -8,7 +8,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 export default function TrustPage() {
   const { t } = useLanguage();
   return (
-    <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=1800&q=80)" }}>
+    <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1693761935586-5939ab418d0d?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link></div>
         <section className="workflow-card">

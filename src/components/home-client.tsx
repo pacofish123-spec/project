@@ -79,6 +79,9 @@ export function HomeClient({ initialVehicles }: { initialVehicles: VehicleCardDa
           <SearchPanel />
           <div className="hero-note"><ShieldCheck size={17} /> {t("heroNote")}</div>
         </div>
+        <svg className="hero-wave" viewBox="0 0 1440 64" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0,32 C240,64 480,0 720,20 C960,40 1200,64 1440,28 L1440,64 L0,64 Z" fill="var(--cream)" />
+        </svg>
       </section>
 
       <section className="section page-width how-it-works">
