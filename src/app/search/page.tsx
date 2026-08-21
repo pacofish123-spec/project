@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SearchResultsClient } from "@/components/search-results-client";
 import type { VehicleCardData } from "@/components/vehicle-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { attachVerifiedFlag } from "@/lib/vehicle-verification";
+import { attachTrustBadges } from "@/lib/vehicle-verification";
 import { defaultDateRange } from "@/lib/default-date-range";
 import { drDestinations, findDestinationPhoto } from "@/lib/destinations";
 
@@ -34,7 +34,7 @@ async function loadInitialVehicles(city: string, params: Awaited<PageProps["sear
   if (seats && Number.isFinite(Number(seats))) query = query.gte("seats", Number(seats));
 
   const { data } = await query.order("promoted", { ascending: false }).order("created_at", { ascending: false }).limit(24);
-  return attachVerifiedFlag(supabase, (data ?? []) as VehicleCardData[]);
+  return attachTrustBadges(supabase, (data ?? []) as VehicleCardData[]);
 }
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {

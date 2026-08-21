@@ -45,6 +45,7 @@ input, textarea, select { font-size: 16px; }
 .vehicle-image-placeholder { display: grid; place-items: center; background: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 2px, transparent 2px 16px), linear-gradient(155deg, #21503f, #0d271f); color: rgba(255,255,255,.6); }
 html.dark .vehicle-image-placeholder { background: repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 2px, transparent 2px 16px), linear-gradient(155deg, #183a30, #08160f); }
 .promoted-badge { background: var(--coral); color: #fff; }
+.id-verified-badge { background: #0754b8; color: #fff; }
 .destination-tile-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 8px; }
 .destination-tile { display: flex; align-items: end; justify-content: space-between; min-height: 150px; padding: 14px; color: #fff; background-position: center; background-size: cover; border-radius: 8px; box-shadow: inset 0 -100px 80px rgba(0,0,0,.72), inset 0 0 0 1px rgba(0,0,0,.08); }
 .destination-tile span { font: 700 20px Georgia, "Noto Serif", "Times New Roman", serif; text-shadow: 0 2px 12px rgba(0,0,0,.7), 0 1px 3px rgba(0,0,0,.9); }

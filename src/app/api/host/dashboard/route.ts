@@ -17,7 +17,7 @@ export async function GET() {
     // not on each other — fetch them together instead of one after the other.
     const [{ data: requests }, { data: verificationRecords }] = await Promise.all([
       allVehicleIds.length
-        ? supabase.from("bookings").select("*, vehicles(make, model, year, photo_paths)").in("vehicle_id", allVehicleIds).order("created_at", { ascending: false })
+        ? supabase.from("bookings").select("*, vehicles(make, model, year, photo_paths), payment_records(status, kind, provider)").in("vehicle_id", allVehicleIds).order("created_at", { ascending: false })
         : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
       allVehicleIds.length
         ? supabase.from("verification_records").select("vehicle_id, status, created_at").eq("verification_type", "vehicle").in("vehicle_id", allVehicleIds).order("created_at", { ascending: false })

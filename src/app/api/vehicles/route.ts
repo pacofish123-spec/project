@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCapability } from "@/lib/authorization";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { attachVerifiedFlag } from "@/lib/vehicle-verification";
+import { attachTrustBadges } from "@/lib/vehicle-verification";
 
 interface VehicleInput {
   hostType?: "individual" | "business";
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
         .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
     }
 
-    const vehiclesWithVerification = await attachVerifiedFlag(supabase, vehicles);
+    const vehiclesWithVerification = await attachTrustBadges(supabase, vehicles);
 
     return NextResponse.json({ vehicles: vehiclesWithVerification });
   } catch {

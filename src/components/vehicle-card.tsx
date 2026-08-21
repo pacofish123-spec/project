@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CarFront, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { BadgeCheck, CarFront, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { convertApprox, defaultCurrencyByLanguage, type CurrencyRate } from "@/lib/currency";
 import { formatMoney } from "@/lib/format";
@@ -9,6 +9,7 @@ import { vehiclePhotoUrl } from "@/lib/storage-url";
 
 export interface VehicleCardData {
   id: string;
+  owner_user_id: string;
   make: string;
   model: string;
   year: number;
@@ -21,6 +22,7 @@ export interface VehicleCardData {
   has_ac?: boolean;
   promoted?: boolean;
   verified?: boolean;
+  host_identity_verified?: boolean;
   photo_paths?: string[] | null;
   amenities?: string[] | null;
   rental_terms?: string[] | null;
@@ -41,6 +43,7 @@ export function VehicleCard({ vehicle, rates }: { vehicle: VehicleCardData; rate
         {!photoUrl && <CarFront size={40} />}
         <div className="vehicle-card-badges">
           {vehicle.verified && <span className="verified-badge verified-status-badge" title={t("verifiedBadgeExplainer")}><ShieldCheck size={13} /> {t("verificationVerified")}</span>}
+          {vehicle.host_identity_verified && <span className="verified-badge id-verified-badge" title={t("idVerifiedBadgeExplainer")}><BadgeCheck size={13} /> {t("idVerifiedBadge")}</span>}
           {vehicle.promoted && <span className="verified-badge promoted-badge"><Sparkles size={13} /> {t("promotedBadge")}</span>}
         </div>
       </div>

@@ -1,7 +1,7 @@
 import { HomeClient } from "@/components/home-client";
 import type { VehicleCardData } from "@/components/vehicle-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { attachVerifiedFlag } from "@/lib/vehicle-verification";
+import { attachTrustBadges } from "@/lib/vehicle-verification";
 import { getActiveDestinationCities } from "@/lib/active-cities";
 
 // Featured vehicles are fetched server-side so the homepage's initial
@@ -21,7 +21,7 @@ async function loadFeaturedVehicles(): Promise<VehicleCardData[]> {
     .order("created_at", { ascending: false })
     .limit(6);
 
-  return attachVerifiedFlag(supabase, (data ?? []) as VehicleCardData[]);
+  return attachTrustBadges(supabase, (data ?? []) as VehicleCardData[]);
 }
 
 export default async function Home() {

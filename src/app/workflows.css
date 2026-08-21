@@ -94,6 +94,8 @@ html.dark .vehicle-specs-list { color: #b8c6bc; }
 .host-chip-text strong { color: var(--ink); font-size: 14px; font-weight: 700; }
 .host-chip-meta { display: flex; align-items: center; gap: 4px; color: #78847d; font-size: 12px; }
 .host-chip-meta svg { color: var(--coral); }
+.host-chip-name-row, .host-popover-name-row { display: flex; align-items: center; gap: 7px; }
+.id-verified-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 99px; background: #0754b8; color: #fff; font-size: 10px; font-weight: 700; white-space: nowrap; }
 .host-popover-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(6,16,13,.55); }
 .host-popover-card { position: relative; width: min(420px, 100%); max-height: 84vh; overflow-y: auto; padding: 28px 22px 22px; border-radius: 12px; background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px rgba(0,0,0,.35); }
 .sign-in-modal-card { padding: 0; }
@@ -225,6 +227,9 @@ html.dark .skeleton-line, html.dark .skeleton-row { background: #2b3a33; }
 .trip-card-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
 .trip-card-thumb { flex: 0 0 auto; width: 84px; height: 64px; border-radius: 5px; background-position: center; background-size: cover; display: grid; place-items: center; color: rgba(255,255,255,.6); background-color: #21503f; }
 .trip-card-head-text { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.trip-card-badges { display: flex; align-items: center; gap: 6px; }
+.paid-badge { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 99px; background: #e2f1e5; color: #245d38; font-size: 13px; font-weight: 600; }
+.paid-badge-inline { display: inline-flex; align-items: center; gap: 4px; padding: 4px 9px; border-radius: 99px; background: #e2f1e5; color: #245d38; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .trip-section-title { display: flex; align-items: center; gap: 8px; margin: 32px 0 4px; color: var(--ink); font: 400 22px Georgia, "Noto Serif", "Times New Roman", serif; }
 .trip-section-title:first-of-type { margin-top: 0; }
 .trip-section-hint { margin: 0 0 4px; color: #78847d; font-size: 12px; }

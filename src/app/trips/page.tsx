@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, CarFront, ClipboardList, CreditCard, FileDown, Gauge, MapPin, MessageCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, CarFront, CheckCircle2, ClipboardList, CreditCard, FileDown, Gauge, MapPin, MessageCircle } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { SkeletonCards } from "@/components/skeleton";
 import { PublicProfilePopover } from "@/components/public-profile-popover";
@@ -36,6 +36,7 @@ interface HostBooking {
   renter_user_id: string;
   renter_display_name?: string;
   vehicles?: { make?: string; model?: string; year?: number; photo_paths?: string[] | null } | null;
+  payment_records?: Array<{ status: string; kind: string; provider: string }> | null;
 }
 
 interface PaymentProviderOption { id: string; label: string }
@@ -213,22 +214,25 @@ export default function TripsPage() {
                       </div>
                       <p><CalendarDays size={14} /> {tripDateRange(booking.starts_at, booking.ends_at, locale)}</p>
                       <p><MapPin size={14} /> {booking.pickup_location} &rarr; {booking.return_location}</p>
-                      {isPaid && <p><CreditCard size={14} /> {t("paymentPaidLabel")}</p>}
-                      {canPay && (
-                        <div className="pay-now-row">
-                          {payChoiceId === booking.id ? (
-                            <>
-                              {payProviders.map((provider) => (
-                                <button key={provider.id} className="workflow-submit coral" type="button" disabled={payingId === booking.id} onClick={() => startPayment(booking.id, provider.id)}>
-                                  {payingId === booking.id ? t("paymentStarting") : provider.label}
-                                </button>
-                              ))}
-                              <button className="workflow-link" type="button" onClick={() => setPayChoiceId("")}>{t("cancel")}</button>
-                            </>
-                          ) : (
-                            <button className="workflow-submit coral" type="button" onClick={() => setPayChoiceId(booking.id)}><CreditCard size={16} /> {t("payNowAction")}</button>
-                          )}
-                        </div>
+                      {booking.status === "accepted" && (
+                        isPaid ? (
+                          <div className="pay-now-row"><span className="paid-badge"><CheckCircle2 size={15} /> {t("paymentPaidLabel")}</span></div>
+                        ) : canPay && (
+                          <div className="pay-now-row">
+                            {payChoiceId === booking.id ? (
+                              <>
+                                {payProviders.map((provider) => (
+                                  <button key={provider.id} className="workflow-submit coral" type="button" disabled={payingId === booking.id} onClick={() => startPayment(booking.id, provider.id)}>
+                                    {payingId === booking.id ? t("paymentStarting") : provider.label}
+                                  </button>
+                                ))}
+                                <button className="workflow-link" type="button" onClick={() => setPayChoiceId("")}>{t("cancel")}</button>
+                              </>
+                            ) : (
+                              <button className="workflow-submit coral" type="button" onClick={() => setPayChoiceId(booking.id)}><CreditCard size={16} /> {t("payNowAction")}</button>
+                            )}
+                          </div>
+                        )
                       )}
                       <div className="trip-footer">
                         <strong>{formatMoney(booking.total, booking.currency)}</strong>
@@ -272,13 +276,18 @@ export default function TripsPage() {
               {(!hostBookings || hostBookings.length === 0) && <p className="trip-section-hint">{t("tripsBookedFromMeEmpty")}</p>}
               {hostBookings && hostBookings.length > 0 && (
                 <div className="trip-list">
-                  {hostBookings.map((booking) => (
+                  {hostBookings.map((booking) => {
+                    const isHostBookingPaid = (booking.payment_records ?? []).some((record) => record.kind === "charge" && record.status === "paid");
+                    return (
                     <article className="trip-card" key={booking.id}>
                       <div className="trip-card-head">
                         <TripThumb photoPaths={booking.vehicles?.photo_paths} />
                         <div className="trip-card-head-text">
                           <strong>{booking.vehicles ? `${booking.vehicles.make} ${booking.vehicles.model}` : "Vehicle"}</strong>
-                          <span className={`trip-status trip-status-${booking.status}`}>{t(statusKey[booking.status] ?? "statusRequested")}</span>
+                          <span className="trip-card-badges">
+                            {isHostBookingPaid && <span className="paid-badge-inline"><CheckCircle2 size={12} /> {t("paymentPaidLabel")}</span>}
+                            <span className={`trip-status trip-status-${booking.status}`}>{t(statusKey[booking.status] ?? "statusRequested")}</span>
+                          </span>
                         </div>
                       </div>
                       <p>{t("requestedByLabel")} <PublicProfilePopover userId={booking.renter_user_id} displayName={booking.renter_display_name ?? t("hostAnonymousLabel")} /></p>
@@ -303,7 +312,8 @@ export default function TripsPage() {
                         </div>
                       </div>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </>

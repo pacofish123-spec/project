@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star, UserRound, X } from "lucide-react";
+import { BadgeCheck, Star, UserRound, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
 
@@ -13,6 +13,7 @@ export interface HostSummary {
   rating: number | null;
   completed_rentals: number;
   response_rate: number | null;
+  identity_verified: boolean;
 }
 
 interface HostReview {
@@ -59,7 +60,10 @@ export function HostProfileCard({ host, hostTypeLabel }: { host: HostSummary | n
       <button type="button" className="host-profile-chip" onClick={openPopover}>
         <span className="host-avatar">{host.avatar_url ? <img src={host.avatar_url} alt="" /> : <UserRound size={20} />}</span>
         <span className="host-chip-text">
-          <strong>{host.display_name || t("hostAnonymousLabel")}</strong>
+          <span className="host-chip-name-row">
+            <strong>{host.display_name || t("hostAnonymousLabel")}</strong>
+            {host.identity_verified && <span className="id-verified-pill" title={t("idVerifiedBadgeExplainer")}><BadgeCheck size={11} /> {t("idVerifiedBadge")}</span>}
+          </span>
           <span className="host-chip-meta">
             {host.rating != null ? <><Star size={12} fill="currentColor" /> {host.rating.toFixed(1)}</> : hostTypeLabel}
           </span>
@@ -73,7 +77,10 @@ export function HostProfileCard({ host, hostTypeLabel }: { host: HostSummary | n
             <div className="host-popover-head">
               <span className="host-avatar large">{host.avatar_url ? <img src={host.avatar_url} alt="" /> : <UserRound size={30} />}</span>
               <div>
-                <strong>{host.display_name || t("hostAnonymousLabel")}</strong>
+                <span className="host-popover-name-row">
+                  <strong>{host.display_name || t("hostAnonymousLabel")}</strong>
+                  {host.identity_verified && <span className="id-verified-pill" title={t("idVerifiedBadgeExplainer")}><BadgeCheck size={12} /> {t("idVerifiedBadge")}</span>}
+                </span>
                 <span className="admin-row-meta">{t("hostMemberSince", { date: formatDate(host.member_since, localeFor(language)) })}</span>
               </div>
             </div>

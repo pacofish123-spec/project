@@ -8,10 +8,15 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
   const { userId } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [{ data: profile }, { data: stats }, { data: reviews }] = await Promise.all([
+  const [{ data: profile }, { data: stats }, { data: reviews }, { data: identityRecord }] = await Promise.all([
     supabase.from("public_profiles").select("id, display_name, avatar_url, member_since").eq("id", userId).maybeSingle(),
     supabase.from("public_host_profiles").select("rating, completed_rentals, response_rate").eq("user_id", userId).maybeSingle(),
     supabase.from("reviews").select("rating, body, created_at, author_user_id").eq("subject_user_id", userId).order("created_at", { ascending: false }).limit(6),
+    // Only status='verified' rows are publicly readable at all (see
+    // migration 0018) — pending/failed/in_review stays private, so
+    // this can only ever resolve to "verified" or "not verified", never
+    // leak an in-progress verification's status.
+    supabase.from("verification_records").select("id").eq("user_id", userId).eq("verification_type", "identity").eq("status", "verified").maybeSingle(),
   ]);
 
   if (!profile) return NextResponse.json({ error: "Host not found." }, { status: 404 });
@@ -26,5 +31,6 @@ export async function GET(_request: Request, { params }: { params: Promise<{ use
     profile,
     stats: stats ?? { rating: null, completed_rentals: 0, response_rate: null },
     reviews: (reviews ?? []).map((review) => ({ ...review, author_display_name: authorNames.get(review.author_user_id) ?? "—" })),
+    identityVerified: Boolean(identityRecord),
   });
 }

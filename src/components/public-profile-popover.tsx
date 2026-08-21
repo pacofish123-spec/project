@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Star, UserRound, X } from "lucide-react";
+import { BadgeCheck, Star, UserRound, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
 
@@ -36,6 +36,7 @@ export function PublicProfilePopover({ userId, displayName }: { userId: string; 
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [stats, setStats] = useState<PublicStats | null>(null);
   const [reviews, setReviews] = useState<PublicReview[]>([]);
+  const [identityVerified, setIdentityVerified] = useState(false);
 
   async function openPopover() {
     setOpen(true);
@@ -43,10 +44,11 @@ export function PublicProfilePopover({ userId, displayName }: { userId: string; 
     setLoading(true);
     try {
       const response = await fetch(`/api/hosts/${userId}/public`);
-      const result = await response.json() as { profile?: PublicProfile; stats?: PublicStats; reviews?: PublicReview[] };
+      const result = await response.json() as { profile?: PublicProfile; stats?: PublicStats; reviews?: PublicReview[]; identityVerified?: boolean };
       setProfile(result.profile ?? { display_name: displayName, avatar_url: null, member_since: "" });
       setStats(result.stats ?? { rating: null, completed_rentals: 0, response_rate: null });
       setReviews(result.reviews ?? []);
+      setIdentityVerified(Boolean(result.identityVerified));
     } catch {
       setProfile({ display_name: displayName, avatar_url: null, member_since: "" });
       setStats({ rating: null, completed_rentals: 0, response_rate: null });
@@ -69,7 +71,10 @@ export function PublicProfilePopover({ userId, displayName }: { userId: string; 
                 <div className="host-popover-head">
                   <span className="host-avatar large">{profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : <UserRound size={30} />}</span>
                   <div>
-                    <strong>{profile.display_name || displayName}</strong>
+                    <span className="host-popover-name-row">
+                      <strong>{profile.display_name || displayName}</strong>
+                      {identityVerified && <span className="id-verified-pill" title={t("idVerifiedBadgeExplainer")}><BadgeCheck size={12} /> {t("idVerifiedBadge")}</span>}
+                    </span>
                     {profile.member_since && <span className="admin-row-meta">{t("hostMemberSince", { date: formatDate(profile.member_since, localeFor(language)) })}</span>}
                   </div>
                 </div>

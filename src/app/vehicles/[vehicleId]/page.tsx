@@ -27,12 +27,15 @@ async function loadVehicle(vehicleId: string): Promise<Vehicle | null> {
 
 async function loadHostSummary(ownerUserId: string): Promise<HostSummary | null> {
   const supabase = await createSupabaseServerClient();
-  const [{ data: profile }, { data: stats }] = await Promise.all([
+  const [{ data: profile }, { data: stats }, { data: identityRecord }] = await Promise.all([
     supabase.from("public_profiles").select("id, display_name, avatar_url, member_since").eq("id", ownerUserId).maybeSingle(),
     supabase.from("public_host_profiles").select("rating, completed_rentals, response_rate").eq("user_id", ownerUserId).maybeSingle(),
+    // Same public-when-verified rule as the vehicle badge above (0018)
+    // — only a status='verified' identity row is readable here.
+    supabase.from("verification_records").select("id").eq("user_id", ownerUserId).eq("verification_type", "identity").eq("status", "verified").maybeSingle(),
   ]);
   if (!profile) return null;
-  return { ...profile, rating: stats?.rating ?? null, completed_rentals: stats?.completed_rentals ?? 0, response_rate: stats?.response_rate ?? null };
+  return { ...profile, rating: stats?.rating ?? null, completed_rentals: stats?.completed_rentals ?? 0, response_rate: stats?.response_rate ?? null, identity_verified: Boolean(identityRecord) };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

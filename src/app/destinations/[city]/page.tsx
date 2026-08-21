@@ -4,7 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import type { VehicleCardData } from "@/components/vehicle-card";
 import { DestinationDetailClient } from "@/components/destination-detail-client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { attachVerifiedFlag } from "@/lib/vehicle-verification";
+import { attachTrustBadges } from "@/lib/vehicle-verification";
 import { findDestinationBySlug } from "@/lib/destinations";
 
 // Vehicle availability changes as hosts publish/pause listings — this
@@ -27,7 +27,7 @@ async function loadCityVehicles(cityName: string) {
     .limit(6);
 
   const vehicles = (data ?? []) as VehicleCardData[];
-  return attachVerifiedFlag(supabase, vehicles);
+  return attachTrustBadges(supabase, vehicles);
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
