@@ -49,6 +49,7 @@ export async function POST(request: Request) {
 
     if (error) {
       const reason = error.message ?? "";
+      if (reason.includes("ACCOUNT_SUSPENDED")) return NextResponse.json({ error: "Your account is suspended and can't book right now." }, { status: 403 });
       if (reason.includes("VEHICLE_NOT_AVAILABLE")) return NextResponse.json({ error: "Vehicle is not available." }, { status: 404 });
       if (reason.includes("DATES_UNAVAILABLE")) return NextResponse.json({ error: "Those dates are no longer available." }, { status: 409 });
       if (reason.includes("INVALID_DATES") || reason.includes("LOCATIONS_REQUIRED")) return NextResponse.json({ error: "Choose a valid rental period." }, { status: 400 });

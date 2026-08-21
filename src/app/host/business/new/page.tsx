@@ -4,9 +4,8 @@ import Link from "next/link";
 import { ArrowLeft, Building2 } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function NewBusinessPage() {
   const router = useRouter();
@@ -24,9 +23,11 @@ export default function NewBusinessPage() {
     setMessage(result.error ?? t("hostBusinessError"));
   }
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link><ThemeToggle /></div>
+        <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link></div>
         <section className="workflow-card">
           <p className="workflow-kicker">{t("hostBusinessKicker")}</p>
           <h1>{t("hostBusinessTitleLine1")} <em>{t("hostBusinessTitleLine2")}</em></h1>
@@ -39,9 +40,9 @@ export default function NewBusinessPage() {
             <label>{t("hostBusinessDescLabel")}<textarea name="description" placeholder="Tell renters about your fleet and service." /></label>
             <button className="workflow-submit coral" type="submit"><Building2 size={17} /> {t("hostBusinessSubmit")}</button>
           </form>
-          <div className="workflow-lang-bar"><LanguageSwitcher /></div>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

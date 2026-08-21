@@ -4,8 +4,9 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CarFront, MapPin, Sparkles, ShieldCheck } from "lucide-react";
 import { BookingForm, type BookingExtraOption } from "@/components/booking-form";
+import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
+import { formatMoney } from "@/lib/format";
 
 interface Vehicle {
   id: string;
@@ -46,7 +47,9 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ vehicl
   }, [vehicleId]);
 
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page">
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/search"><ArrowLeft size={16} /> {t("backLinkSearch")}</Link></div>
         {vehicle === undefined && <p className="workflow-kicker">{t("loadingVehicles")}</p>}
@@ -67,7 +70,7 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ vehicl
                 {vehicle.seats ? <span>{vehicle.seats} {t("seatsLabel").toLowerCase()}</span> : null}
                 {vehicle.has_ac ? <span>{t("filterAc")}</span> : null}
               </div>
-              <p className="vehicle-detail-price"><strong>{vehicle.base_currency} {vehicle.daily_price}</strong> {t("perDaySuffix")}</p>
+              <p className="vehicle-detail-price"><strong>{formatMoney(vehicle.daily_price, vehicle.base_currency)}</strong> {t("perDaySuffix")}</p>
               <div className="vehicle-detail-trust"><ShieldCheck size={16} /> {t("vehiclePricingNote")}</div>
               {(vehicle.fuel_policy || vehicle.cleaning_policy) && (
                 <div className="admin-reasons" style={{ marginBottom: 18 }}>
@@ -79,8 +82,8 @@ export default function VehicleDetailPage({ params }: { params: Promise<{ vehicl
             </div>
           </section>
         )}
-        <div className="workflow-lang-bar"><LanguageSwitcher /></div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

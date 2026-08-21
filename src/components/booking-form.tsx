@@ -40,8 +40,8 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
   const [selectedExtras, setSelectedExtras] = useState<Record<string, number>>({});
 
   useEffect(() => {
-    if (!startDate || !endDate) { setQuote(null); return; }
-    setQuoteLoading(true);
+    if (!startDate || !endDate) { queueMicrotask(() => setQuote(null)); return; }
+    queueMicrotask(() => setQuoteLoading(true));
     fetch(`/api/vehicles/${vehicleId}/quote?startDate=${startDate}&endDate=${endDate}`).then(async (response) => {
       const result = await response.json() as { quote?: Quote };
       setQuote(response.ok ? result.quote ?? null : null);
@@ -61,10 +61,19 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
     });
   }
 
-  const extrasTotal = Object.entries(selectedExtras).reduce((sum, [extraId, quantity]) => {
-    const extra = extras.find((item) => item.id === extraId);
-    return extra ? sum + extra.price * quantity : sum;
-  }, 0);
+  // Extras aren't currency-locked to the vehicle (a host can set any
+  // currency when creating one), so summing them together only makes
+  // sense within a single currency — mixing them under the vehicle's
+  // currency label would misstate the amount. Only the extras that
+  // actually match the quote's currency count toward the total shown
+  // alongside it; anything else stays visible per-line above but out of
+  // the merged sum.
+  const extrasTotal = quote
+    ? Object.entries(selectedExtras).reduce((sum, [extraId, quantity]) => {
+        const extra = extras.find((item) => item.id === extraId);
+        return extra && extra.currency === quote.currency ? sum + extra.price * quantity : sum;
+      }, 0)
+    : 0;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,10 +140,12 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
         <div className="price-breakdown">
           <div><span>{t("priceBreakdownSubtotal")}</span><span>{formatMoney(quote.gross_subtotal, quote.currency)}</span></div>
           {quote.discount_total > 0 && <div className="discount-line"><span>{t("priceBreakdownDiscount")}</span><span>-{formatMoney(quote.discount_total, quote.currency)}</span></div>}
-          {extrasTotal > 0 && <div><span>{t("extrasSectionTitle")}</span><span>{formatMoney(extrasTotal, quote.currency)}</span></div>}
           <div><span>{t("priceBreakdownTaxes")}</span><span>{formatMoney(quote.taxes_total, quote.currency)}</span></div>
           <div><span>{t("priceBreakdownFee")}</span><span>{formatMoney(quote.platform_fee, quote.currency)}</span></div>
-          <div className="price-total"><span>{t("priceBreakdownTotal")}</span><span>{formatMoney(quote.total + extrasTotal, quote.currency)}</span></div>
+          <div className="price-total"><span>{t("priceBreakdownTotal")}</span><span>{formatMoney(quote.total, quote.currency)}</span></div>
+          {extrasTotal > 0 && (
+            <div className="extras-pending-note"><span>{t("extrasSectionTitle")}: {formatMoney(extrasTotal, quote.currency)}</span><span>{t("extrasPendingHostApproval")}</span></div>
+          )}
         </div>
       )}
 

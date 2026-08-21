@@ -30,7 +30,7 @@ export default function SignInPage() {
   }
 
   return (
-    <main className="workflow-page">
+    <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkHome")}</Link><ThemeToggle /></div>
         <section className="workflow-card">

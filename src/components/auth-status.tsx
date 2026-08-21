@@ -7,7 +7,10 @@ import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useLanguage } from "@/lib/i18n";
 
-export function AuthStatus({ variant = "icon" }: { variant?: "icon" | "full" }) {
+// Full account panel used standalone on /profile. The header's own
+// signed-in/out control is AuthMenu, a popover — this component only
+// renders the "full" layout that used to be one of its two variants.
+export function AuthStatus() {
   const router = useRouter();
   const { t } = useLanguage();
   // undefined = still checking, null = signed out, string = signed-in email
@@ -27,11 +30,6 @@ export function AuthStatus({ variant = "icon" }: { variant?: "icon" | "full" }) 
     setEmail(null);
     router.push("/");
     router.refresh();
-  }
-
-  if (variant === "icon") {
-    if (email) return <button className="profile-button" aria-label={t("authSignOut")} onClick={signOut}><UserRound size={18} /></button>;
-    return <Link className="profile-button" aria-label={t("signIn")} href="/sign-in"><UserRound size={18} /></Link>;
   }
 
   if (email === undefined) return <p className="workflow-kicker">{t("authCheckingSession")}</p>;

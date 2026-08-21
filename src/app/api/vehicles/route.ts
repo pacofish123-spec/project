@@ -36,25 +36,27 @@ export async function GET(request: Request) {
   try {
     const supabase = await createSupabaseServerClient();
 
-    let excludedVehicleIds: string[] = [];
-    if (startDate && endDate) {
-      const startsAt = new Date(startDate);
-      const endsAt = new Date(endDate);
-      if (Number.isFinite(startsAt.getTime()) && Number.isFinite(endsAt.getTime()) && endsAt > startsAt) {
-        const { data: conflicts } = await supabase.from("bookings").select("vehicle_id").in("status", ["requested", "accepted", "in_progress"]).lt("starts_at", endsAt.toISOString()).gt("ends_at", startsAt.toISOString());
-        excludedVehicleIds = [...new Set((conflicts ?? []).map((booking) => booking.vehicle_id))];
-      }
-    }
+    // The date-conflict lookup and the geo-distance RPC are independent
+    // of each other — a search with both dates and a location previously
+    // paid for two round trips in sequence for no reason.
+    const startsAt = startDate ? new Date(startDate) : null;
+    const endsAt = endDate ? new Date(endDate) : null;
+    const datesValid = Boolean(startsAt && endsAt && Number.isFinite(startsAt.getTime()) && Number.isFinite(endsAt.getTime()) && endsAt > startsAt);
+    const originLat = lat ? Number(lat) : null;
+    const originLng = lng ? Number(lng) : null;
+    const coordsValid = Boolean(originLat !== null && originLng !== null && Number.isFinite(originLat) && Number.isFinite(originLng));
 
-    let distanceByVehicle = new Map<string, number>();
-    if (lat && lng) {
-      const originLat = Number(lat);
-      const originLng = Number(lng);
-      if (Number.isFinite(originLat) && Number.isFinite(originLng)) {
-        const { data: distances } = await supabase.rpc("vehicles_with_distance", { origin_lat: originLat, origin_lng: originLng });
-        distanceByVehicle = new Map((distances ?? []).map((row: { id: string; distance_km: number }) => [row.id, row.distance_km]));
-      }
-    }
+    const [conflictsResult, distancesResult] = await Promise.all([
+      datesValid
+        ? supabase.from("bookings").select("vehicle_id").in("status", ["requested", "accepted", "in_progress"]).lt("starts_at", endsAt!.toISOString()).gt("ends_at", startsAt!.toISOString())
+        : Promise.resolve({ data: null }),
+      coordsValid
+        ? supabase.rpc("vehicles_with_distance", { origin_lat: originLat, origin_lng: originLng })
+        : Promise.resolve({ data: null }),
+    ]);
+
+    const excludedVehicleIds = [...new Set((conflictsResult.data ?? []).map((booking) => booking.vehicle_id))];
+    const distanceByVehicle = new Map((distancesResult.data ?? []).map((row: { id: string; distance_km: number }) => [row.id, row.distance_km]));
 
     let query = supabase.from("vehicles").select("*").eq("status", "published");
     if (hostType === "individual" || hostType === "business") query = query.eq("host_type", hostType);

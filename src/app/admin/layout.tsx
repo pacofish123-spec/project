@@ -1,9 +1,8 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { requireCapability } from "@/lib/authorization";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppHeader } from "@/components/app-header";
 import { AdminTabs } from "@/components/admin-tabs";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -14,15 +13,15 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   return (
-    <main className="workflow-page">
-      <div className="page-width">
-        <div className="workflow-nav">
-          <Link className="workflow-back" href="/"><ShieldCheck size={16} /> yoRento Admin</Link>
-          <ThemeToggle />
+    <>
+      <AppHeader />
+      <main className="workflow-page">
+        <div className="page-width">
+          <p className="admin-area-kicker"><ShieldCheck size={14} /> yoRento Admin</p>
+          <AdminTabs />
+          {children}
         </div>
-        <AdminTabs />
-        {children}
-      </div>
-    </main>
+      </main>
+    </>
   );
 }

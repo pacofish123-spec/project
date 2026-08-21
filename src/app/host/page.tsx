@@ -3,17 +3,18 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Building2, Check, UserRound } from "lucide-react";
 import { useState } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
 
 export default function HostPage() {
   const { t } = useLanguage();
   const [choice, setChoice] = useState<"personal" | "business">("personal");
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkHome")}</Link><ThemeToggle /></div>
+        <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkHome")}</Link></div>
         <section className="workflow-card wide">
           <p className="workflow-kicker">{t("hostOnboardingKicker")}</p>
           <h1>{t("rentCarLine1")}<br /><em>{t("rentCarLine2")}</em></h1>
@@ -37,9 +38,9 @@ export default function HostPage() {
             <span className="workflow-link">{t("hostSelected")} {choice === "personal" ? t("hostPersonalTitle") : t("hostBusinessTitle")}</span>
             <Link className="workflow-submit" href={choice === "personal" ? "/host/cars/new?host=personal" : "/host/business/new"}>{t("hostContinue")} <ArrowRight size={16} /></Link>
           </div>
-          <div className="workflow-lang-bar"><LanguageSwitcher /></div>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

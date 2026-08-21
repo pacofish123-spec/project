@@ -19,7 +19,7 @@ export default function RecoverPage() {
     setMessage(t("recoverSuccessMessage"));
   }
   return (
-    <main className="workflow-page">
+    <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/sign-in"><ArrowLeft size={16} /> {t("backLinkSignIn")}</Link><ThemeToggle /></div>
         <section className="workflow-card">

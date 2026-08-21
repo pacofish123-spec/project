@@ -4,11 +4,13 @@ import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, ArrowRight, CarFront, LocateFixed } from "lucide-react";
-import { SearchControls, type SearchFilters } from "@/components/search-controls";
+import { SearchPanel } from "@/components/search-panel";
+import { FiltersButton, type SearchFilters } from "@/components/filters-button";
 import { VehicleCard, type VehicleCardData } from "@/components/vehicle-card";
+import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { useCurrencyRates } from "@/lib/use-currency-rates";
+import { drDestinations, findDestinationPhoto } from "@/lib/destinations";
 
 const emptyFilters: SearchFilters = { transmission: "", minPrice: "", maxPrice: "", seats: "" };
 
@@ -16,7 +18,8 @@ function SearchResults() {
   const { t } = useLanguage();
   const rates = useCurrencyRates();
   const searchParams = useSearchParams();
-  const destination = searchParams.get("location") ?? searchParams.get("destination") ?? "Dominican Republic";
+  const initialDestination = searchParams.get("location") ?? searchParams.get("destination") ?? drDestinations[0].name;
+  const [destination, setDestination] = useState(initialDestination);
   const [vehicles, setVehicles] = useState<VehicleCardData[] | null>(null);
   const [error, setError] = useState("");
   const [nearMe, setNearMe] = useState<{ lat: number; lng: number } | null>(null);
@@ -26,7 +29,7 @@ function SearchResults() {
 
   useEffect(() => {
     const params = new URLSearchParams();
-    if (destination && destination !== "Dominican Republic") params.set("city", destination);
+    if (destination) params.set("city", destination);
     if (dates.startDate) params.set("startDate", dates.startDate);
     if (dates.endDate) params.set("endDate", dates.endDate);
     if (nearMe) { params.set("lat", String(nearMe.lat)); params.set("lng", String(nearMe.lng)); }
@@ -52,27 +55,38 @@ function SearchResults() {
   }
 
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page">
       <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkToBrowse")}</Link><Link className="workflow-link" href="/sign-in">{t("signIn")}</Link></div>
-        <section className="search-results-head">
-          <p className="workflow-kicker">{t("searchKicker")}</p>
-          <h1>{t("searchCarsIn")} <em>{destination}</em></h1>
-          <p>{t("searchIntro")}</p>
-          <SearchControls
-            destination={destination}
-            startDate={dates.startDate}
-            endDate={dates.endDate}
-            onDatesChange={(startDate, endDate) => setDates({ startDate, endDate })}
-            filters={filters}
-            onFiltersChange={setFilters}
+        <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkToBrowse")}</Link></div>
+
+        <section className="destination-hero" style={{ backgroundImage: `url(${findDestinationPhoto(destination)})` }}>
+          <div>
+            <p className="workflow-kicker" style={{ color: "#f5b196" }}>{t("searchKicker")}</p>
+            <h1>{destination}</h1>
+            <p>{t("searchIntro")}</p>
+          </div>
+        </section>
+
+        <div className="destination-search-panel">
+          <SearchPanel
+            initialLocation={destination}
+            initialStartDate={dates.startDate}
+            initialEndDate={dates.endDate}
+            onSearch={(values) => { setDestination(values.location); setDates({ startDate: values.startDate, endDate: values.endDate }); }}
           />
-          <div className="admin-filters" style={{ marginTop: 14 }}>
+        </div>
+
+        <div className="results-toolbar">
+          <FiltersButton filters={filters} onFiltersChange={setFilters} />
+          <div className="admin-filters">
             <button className={nearMe ? "active" : ""} type="button" disabled={locating} onClick={findNearMe}>
               <LocateFixed size={13} style={{ verticalAlign: "-2px", marginRight: 5 }} />{t("nearMeButton")}
             </button>
           </div>
-        </section>
+        </div>
+
         {error && <p className="workflow-error">{error}</p>}
         {vehicles === null && <p className="workflow-kicker">{t("loadingVehicles")}</p>}
         {vehicles !== null && vehicles.length > 0 && <div className="vehicle-grid">{vehicles.map((vehicle) => <VehicleCard vehicle={vehicle} rates={rates} key={vehicle.id} />)}</div>}
@@ -84,9 +98,9 @@ function SearchResults() {
             <Link className="workflow-submit coral" href="/host">{t("listAVehicle")} <ArrowRight size={16} /></Link>
           </section>
         )}
-        <div className="workflow-lang-bar"><LanguageSwitcher /></div>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 

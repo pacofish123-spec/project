@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { supportedLanguages, type SupportedLanguage } from "@/lib/marketplace-config";
 import { dictionaries, type TranslationKey } from "@/lib/translations";
 
@@ -29,20 +29,27 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  function setLanguage(next: SupportedLanguage) {
+  const setLanguage = useCallback((next: SupportedLanguage) => {
     setLanguageState(next);
     window.localStorage.setItem(STORAGE_KEY, next);
-  }
+  }, []);
 
-  function t(key: TranslationKey, vars?: Record<string, string | number>): string {
+  // Stable identity across re-renders (keyed only on language, not on
+  // every render) — consumers that memoize a fetch callback on [t] (e.g.
+  // useCallback(load, [t])) would otherwise get a new t on every render
+  // of the provider (language switch, mount hydration, etc.) and
+  // re-fetch needlessly.
+  const t = useCallback((key: TranslationKey, vars?: Record<string, string | number>): string => {
     let text = dictionaries[language][key] ?? dictionaries.en[key] ?? key;
     if (vars) {
       for (const [name, value] of Object.entries(vars)) text = text.replaceAll(`{${name}}`, String(value));
     }
     return text;
-  }
+  }, [language]);
 
-  return <LanguageContext.Provider value={{ language, setLanguage, t }}>{children}</LanguageContext.Provider>;
+  const value = useMemo(() => ({ language, setLanguage, t }), [language, setLanguage, t]);
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
 }
 
 export function useLanguage(): LanguageContextValue {

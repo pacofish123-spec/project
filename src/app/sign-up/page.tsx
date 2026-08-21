@@ -35,7 +35,7 @@ export default function SignUpPage() {
   }
 
   return (
-    <main className="workflow-page">
+    <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkHome")}</Link><ThemeToggle /></div>
         <section className="workflow-card">

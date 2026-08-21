@@ -3,6 +3,7 @@
 import { use, FormEvent, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Send } from "lucide-react";
+import { AppHeader } from "@/components/app-header";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -53,7 +54,9 @@ export default function MessagesPage({ params }: { params: Promise<{ bookingId: 
   }
 
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page">
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/trips"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link></div>
         <section className="workflow-card">
@@ -74,6 +77,7 @@ export default function MessagesPage({ params }: { params: Promise<{ bookingId: 
           </form>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

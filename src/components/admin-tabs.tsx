@@ -3,11 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+// Overview always leads — it's the landing dashboard (pending tasks,
+// counts, earnings summary). Everything else is alphabetical.
 const tabs = [
-  { href: "/admin/verification", label: "Verification" },
-  { href: "/admin/users", label: "Directory" },
+  { href: "/admin", label: "Overview" },
   { href: "/admin/bookings", label: "Bookings" },
+  { href: "/admin/businesses", label: "Businesses" },
+  { href: "/admin/disputes", label: "Disputes" },
   { href: "/admin/duplicates", label: "Duplicates" },
+  { href: "/admin/earnings", label: "Earnings" },
+  { href: "/admin/users", label: "Users" },
+  { href: "/admin/vehicles", label: "Vehicles" },
+  { href: "/admin/verification", label: "Verification" },
 ];
 
 export function AdminTabs() {
@@ -15,7 +22,7 @@ export function AdminTabs() {
   return (
     <nav className="admin-tabs">
       {tabs.map((tab) => (
-        <Link key={tab.href} href={tab.href} className={pathname.startsWith(tab.href) ? "active" : ""}>{tab.label}</Link>
+        <Link key={tab.href} href={tab.href} className={pathname === tab.href ? "active" : ""}>{tab.label}</Link>
       ))}
     </nav>
   );

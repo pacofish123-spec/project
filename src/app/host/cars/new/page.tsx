@@ -4,10 +4,9 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, CarFront, MapPin } from "lucide-react";
 import { FormEvent, Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppHeader } from "@/components/app-header";
 import { SelectField } from "@/components/select-field";
 import { useLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { countries, supportedCurrencies } from "@/lib/marketplace-config";
 
 function NewVehicleForm() {
@@ -65,9 +64,11 @@ function NewVehicleForm() {
   }
 
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link><ThemeToggle /></div>
+        <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link></div>
         <section className="workflow-card wide">
           <p className="workflow-kicker">{hostType === "business" ? t("hostCarsKickerBusiness") : t("hostCarsKickerPersonal")}</p>
           <h1>{t("hostCarsTitleLine1")} <em>{t("hostCarsTitleLine2")}</em></h1>
@@ -93,10 +94,10 @@ function NewVehicleForm() {
             </div>
             <button className="workflow-submit coral" type="submit"><CarFront size={17} /> {t("hostCarsSubmit")} <ArrowRight size={16} /></button>
           </form>
-          <div className="workflow-lang-bar"><LanguageSwitcher /></div>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }
 

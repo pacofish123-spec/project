@@ -3,9 +3,8 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Package, Plus } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { formatMoney } from "@/lib/format";
 
 interface Extra {
@@ -67,9 +66,11 @@ export default function HostExtrasPage() {
   }
 
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page">
       <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/host/dashboard"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link><ThemeToggle /></div>
+        <div className="workflow-nav"><Link className="workflow-back" href="/host/dashboard"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link></div>
         <section className="workflow-card wide">
           <p className="workflow-kicker">{t("hostExtrasKicker")}</p>
           <h1>{t("hostExtrasTitle")}</h1>
@@ -113,9 +114,9 @@ export default function HostExtrasPage() {
           <div className="workflow-actions" style={{ marginTop: 24 }}>
             <Link className="workflow-link" href="/host/dashboard">{t("backLinkHostSetup")} <ArrowRight size={14} /></Link>
           </div>
-          <div className="workflow-lang-bar"><LanguageSwitcher /></div>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

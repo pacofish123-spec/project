@@ -12,26 +12,36 @@ export async function GET() {
     const { data: businessVehicles } = businessIds.length ? await supabase.from("vehicles").select("*").in("business_id", businessIds).order("created_at", { ascending: false }) : { data: [] };
     const allVehicles = [...(vehicles ?? []), ...(businessVehicles ?? [])];
     const allVehicleIds = allVehicles.map((vehicle) => vehicle.id);
-    const { data: requests } = allVehicleIds.length ? await supabase.from("bookings").select("*, vehicles(make, model, year)").in("vehicle_id", allVehicleIds).order("created_at", { ascending: false }) : { data: [] };
 
-    const renterIds = [...new Set((requests ?? []).map((request) => request.renter_user_id))];
-    const { data: renterProfiles } = renterIds.length ? await supabase.from("public_profiles").select("id, display_name").in("id", renterIds) : { data: [] };
-    const renterNames = new Map((renterProfiles ?? []).map((profile) => [profile.id, profile.display_name]));
-    const requestsWithRenter = (requests ?? []).map((request) => ({ ...request, renter_display_name: renterNames.get(request.renter_user_id) ?? "Renter" }));
+    // requests and verificationRecords both only depend on allVehicleIds,
+    // not on each other — fetch them together instead of one after the other.
+    const [{ data: requests }, { data: verificationRecords }] = await Promise.all([
+      allVehicleIds.length
+        ? supabase.from("bookings").select("*, vehicles(make, model, year)").in("vehicle_id", allVehicleIds).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+      allVehicleIds.length
+        ? supabase.from("verification_records").select("vehicle_id, status, created_at").eq("verification_type", "vehicle").in("vehicle_id", allVehicleIds).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as Array<{ vehicle_id: string | null; status: string }> }),
+    ]);
 
-    const { data: verificationRecords } = allVehicleIds.length
-      ? await supabase.from("verification_records").select("vehicle_id, status, created_at").eq("verification_type", "vehicle").in("vehicle_id", allVehicleIds).order("created_at", { ascending: false })
-      : { data: [] };
     const verificationByVehicle = new Map<string, string>();
     for (const record of verificationRecords ?? []) {
       if (record.vehicle_id && !verificationByVehicle.has(record.vehicle_id)) verificationByVehicle.set(record.vehicle_id, record.status);
     }
     const vehiclesWithVerification = allVehicles.map((vehicle) => ({ ...vehicle, verification_status: verificationByVehicle.get(vehicle.id) ?? "not_started" }));
 
-    const bookingIds = (requests ?? []).map((request) => request.id);
-    const { data: extraRequests } = bookingIds.length
-      ? await supabase.from("booking_extras").select("*, extras(name, currency), bookings(vehicles(make, model))").in("booking_id", bookingIds).eq("status", "requested")
-      : { data: [] };
+    // Same for renterProfiles and extraRequests — both only need requests,
+    // not each other.
+    const renterIds = [...new Set((requests ?? []).map((request) => (request as { renter_user_id: string }).renter_user_id))];
+    const bookingIds = (requests ?? []).map((request) => (request as { id: string }).id);
+    const [{ data: renterProfiles }, { data: extraRequests }] = await Promise.all([
+      renterIds.length ? supabase.from("public_profiles").select("id, display_name").in("id", renterIds) : Promise.resolve({ data: [] as Array<{ id: string; display_name: string }> }),
+      bookingIds.length
+        ? supabase.from("booking_extras").select("*, extras(name, currency), bookings(vehicles(make, model))").in("booking_id", bookingIds).eq("status", "requested")
+        : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
+    ]);
+    const renterNames = new Map((renterProfiles ?? []).map((profile) => [profile.id, profile.display_name]));
+    const requestsWithRenter = (requests ?? []).map((request) => ({ ...request, renter_display_name: renterNames.get((request as { renter_user_id: string }).renter_user_id) ?? "Renter" }));
 
     return NextResponse.json({ vehicles: vehiclesWithVerification, businesses: memberships ?? [], requests: requestsWithRenter, extraRequests: extraRequests ?? [] });
   } catch (error) {

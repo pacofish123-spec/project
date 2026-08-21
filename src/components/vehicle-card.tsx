@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CarFront, Sparkles, UserRound } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { convertApprox, defaultCurrencyByLanguage, type CurrencyRate } from "@/lib/currency";
+import { formatMoney } from "@/lib/format";
 
 export interface VehicleCardData {
   id: string;
@@ -48,7 +49,7 @@ export function VehicleCard({ vehicle, rates }: { vehicle: VehicleCardData; rate
         </div>
         <div className="vehicle-footer">
           <strong>
-            {vehicle.base_currency} {vehicle.daily_price}<small> {t("perDaySuffix")}</small>
+            {formatMoney(vehicle.daily_price, vehicle.base_currency)}<small> {t("perDaySuffix")}</small>
             {approx !== null && <small className="approx-price"> &middot; ~{preferredCurrency} {approx.toFixed(0)}</small>}
           </strong>
           <span className="host-label">

@@ -8,7 +8,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 export default function AboutPage() {
   const { t } = useLanguage();
   return (
-    <main className="workflow-page">
+    <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link></div>
         <section className="workflow-card">

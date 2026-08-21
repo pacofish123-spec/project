@@ -5,9 +5,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ boo
   try {
     const { bookingId } = await params;
     const { supabase } = await requireUser();
-    const { data, error } = await supabase.from("messages").select("*").eq("booking_id", bookingId).order("created_at", { ascending: true });
+    // mark_messages_read doesn't affect what's returned here, so it
+    // doesn't need to block the select — run them together rather than
+    // one after the other. (Still awaited, not fire-and-forget: an
+    // unawaited promise isn't guaranteed to finish once the response is
+    // sent in a serverless runtime.)
+    const [{ data, error }] = await Promise.all([
+      supabase.from("messages").select("*").eq("booking_id", bookingId).order("created_at", { ascending: true }),
+      supabase.rpc("mark_messages_read", { target_booking_id: bookingId }),
+    ]);
     if (error) return NextResponse.json({ error: "Unable to load messages." }, { status: 500 });
-    await supabase.rpc("mark_messages_read", { target_booking_id: bookingId });
     return NextResponse.json({ messages: data });
   } catch (error) {
     const message = error instanceof Error ? error.message : "REQUEST_FAILED";

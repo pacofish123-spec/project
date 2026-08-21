@@ -9,6 +9,7 @@ export async function POST(_request: Request, { params }: { params: Promise<{ ve
 
     if (error) {
       const reason = error.message ?? "";
+      if (reason.includes("ACCOUNT_SUSPENDED")) return NextResponse.json({ error: "Your account is suspended and can't publish listings right now." }, { status: 403 });
       if (reason.includes("VEHICLE_ACCESS_DENIED")) return NextResponse.json({ error: "You are not authorized to manage this vehicle." }, { status: 403 });
       if (reason.includes("VEHICLE_NOT_VERIFIED")) return NextResponse.json({ error: "This vehicle needs a verified check before it can be published." }, { status: 409 });
       if (reason.includes("VEHICLE_NOT_ELIGIBLE")) return NextResponse.json({ error: "This vehicle can't be published from its current status." }, { status: 409 });

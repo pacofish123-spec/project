@@ -3,10 +3,9 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Building2, CalendarDays, CarFront, MessageCircle, Plus, ShieldCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { AppHeader } from "@/components/app-header";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import type { TranslationKey } from "@/lib/translations";
 
 interface BookingRequest {
@@ -113,9 +112,11 @@ export default function HostDashboardPage() {
   const pendingRequests = (data?.requests ?? []).filter((request) => request.status === "requested");
 
   return (
-    <main className="workflow-page">
-      <div className="page-width">
-        <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link><ThemeToggle /></div>
+    <>
+      <AppHeader />
+      <main className="workflow-page">
+        <div className="page-width">
+        <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link></div>
         <section className="dashboard-head">
           <div><p className="workflow-kicker">{t("hostDashboardKicker")}</p><h1>{t("hostDashboardTitleLine1")}<br /><em>{t("hostDashboardTitleLine2")}</em></h1><p>{t("hostDashboardIntro")}</p></div>
           <Link className="workflow-submit coral" href="/host/cars/new"><Plus size={17} /> {t("hostDashboardAddVehicle")}</Link>
@@ -220,8 +221,8 @@ export default function HostDashboardPage() {
         )}
 
         <p className="legal-note">{t("hostDashboardLegalNote")}</p>
-        <div className="workflow-lang-bar"><LanguageSwitcher /></div>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

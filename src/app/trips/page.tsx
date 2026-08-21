@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ClipboardList, Gauge, MapPin, MessageCircle } from "lucide-react";
+import { AppHeader } from "@/components/app-header";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import type { TranslationKey } from "@/lib/translations";
 
 interface Booking {
@@ -68,7 +68,9 @@ export default function TripsPage() {
   }
 
   return (
-    <main className="workflow-page">
+    <>
+      <AppHeader />
+      <main className="workflow-page">
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link>{!bookings && <Link className="workflow-link" href="/sign-in">{t("signIn")}</Link>}</div>
         <section className="workflow-card wide">
@@ -131,9 +133,9 @@ export default function TripsPage() {
               ))}
             </div>
           )}
-          <div className="workflow-lang-bar"><LanguageSwitcher /></div>
         </section>
       </div>
-    </main>
+      </main>
+    </>
   );
 }

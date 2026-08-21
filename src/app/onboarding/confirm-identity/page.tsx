@@ -33,7 +33,7 @@ export default function ConfirmOAuthIdentityPage() {
   }
 
   return (
-    <main className="workflow-page">
+    <main className="workflow-page has-photo" style={{ backgroundImage: "url(https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?auto=format&fit=crop&w=1800&q=80)" }}>
       <div className="page-width">
         <section className="workflow-card" style={{ marginTop: 32 }}>
           <p className="workflow-kicker">{t("onboardingKicker")}</p>

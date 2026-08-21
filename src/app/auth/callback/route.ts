@@ -15,5 +15,8 @@ export async function GET(request: Request) {
       isNewUser = new Date(user.created_at).getTime() === new Date(user.last_sign_in_at).getTime();
     }
   }
+  // Admins land on the normal homepage like everyone else — the header's
+  // AuthMenu surfaces an Admin link for them instead of forcing a
+  // separate landing page here.
   return NextResponse.redirect(new URL(isNewUser ? "/onboarding/confirm-identity" : "/", request.url));
 }
