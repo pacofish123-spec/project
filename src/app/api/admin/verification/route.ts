@@ -15,7 +15,24 @@ export async function GET() {
       ? await supabase.from("public_profiles").select("id, display_name").in("id", requesterIds)
       : { data: [] };
     const requesterNames = new Map((requesters ?? []).map((profile) => [profile.id, profile.display_name]));
-    const records = (data ?? []).map((record) => ({ ...record, requester_display_name: record.user_id ? requesterNames.get(record.user_id) ?? "—" : "—" }));
+
+    // Identity documents live in a private bucket — sign each path so
+    // the admin queue can actually show the photo, the same way
+    // vehicle-photos' public URLs just work for vehicle records.
+    const documentPaths = (data ?? []).flatMap((record) => record.document_paths ?? []);
+    const signedUrlByPath = new Map<string, string>();
+    if (documentPaths.length > 0) {
+      const { data: signed } = await supabase.storage.from("identity-documents").createSignedUrls(documentPaths, 3600);
+      for (const entry of signed ?? []) {
+        if (entry.signedUrl && entry.path) signedUrlByPath.set(entry.path, entry.signedUrl);
+      }
+    }
+
+    const records = (data ?? []).map((record) => ({
+      ...record,
+      requester_display_name: record.user_id ? requesterNames.get(record.user_id) ?? "—" : "—",
+      document_urls: (record.document_paths ?? []).map((path: string) => signedUrlByPath.get(path)).filter(Boolean),
+    }));
 
     return NextResponse.json({ records });
   } catch (error) {

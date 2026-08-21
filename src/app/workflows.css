@@ -148,6 +148,8 @@ html.dark .message-composer input { border-color: #385047; }
 .skeleton-row { height: 38px; border-radius: 5px; background: #e4e8e1; animation: skeleton-pulse 1.4s ease-in-out infinite; }
 html.dark .skeleton-card, html.dark .skeleton-tile { border-color: #385047; }
 html.dark .skeleton-line, html.dark .skeleton-row { background: #2b3a33; }
+.pay-now-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+.pay-now-row .workflow-submit { min-height: 40px; padding: 0 16px; margin-top: 0; }
 .trip-list { display: grid; gap: 12px; margin-top: 18px; }
 .trip-card { display: grid; gap: 8px; padding: 18px; border: 1px solid #d4dfd6; border-radius: 6px; background: var(--paper); }
 .app-placeholder-tile { opacity: .55; }

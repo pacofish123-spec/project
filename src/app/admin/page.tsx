@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BarChart3, Building2, CalendarClock, CarFront, CheckCircle2, Copy, LayoutDashboard, ShieldCheck, Users, Wallet } from "lucide-react";
+import { AlertTriangle, BarChart3, Building2, CalendarClock, CarFront, CheckCircle2, Copy, CreditCard, LayoutDashboard, ShieldCheck, Users, Wallet } from "lucide-react";
 import { SkeletonTiles } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 
@@ -40,7 +40,7 @@ export default function AdminOverviewPage() {
     }).catch(() => { setMessage("Unable to load overview."); setLoading(false); });
   }, []);
 
-  if (loading) return <SkeletonTiles count={9} />;
+  if (loading) return <SkeletonTiles count={10} />;
   if (message) return <div className="dashboard-message"><LayoutDashboard size={22} /><p>{message}</p></div>;
   if (!overview) return null;
 
@@ -69,6 +69,7 @@ export default function AdminOverviewPage() {
     { icon: ShieldCheck, value: String(pendingTasks.verificationAwaitingReview), label: "Verification requests to review", href: "/admin/verification" },
     { icon: Copy, value: String(pendingTasks.duplicatesAwaitingReview), label: "Duplicate accounts to review", href: "/admin/duplicates" },
     { icon: Wallet, value: earningsSummary, label: "Platform earnings", href: "/admin/earnings" },
+    { icon: CreditCard, value: "", label: "Payments", href: "/admin/payments" },
     { icon: BarChart3, value: "", label: "Site analytics", href: "/admin/analytics" },
   ];
 

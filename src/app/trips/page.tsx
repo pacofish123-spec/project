@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ClipboardList, Gauge, MapPin, MessageCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ClipboardList, CreditCard, Gauge, MapPin, MessageCircle } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -19,7 +19,10 @@ interface Booking {
   total: number;
   currency: string;
   vehicles?: { make: string; model: string; year: number; location_city: string; host_type: string } | null;
+  payment_records?: Array<{ status: string; kind: string; provider: string }> | null;
 }
+
+interface PaymentProviderOption { id: string; label: string }
 
 const statusKey: Record<string, TranslationKey> = {
   requested: "statusRequested",
@@ -42,6 +45,30 @@ export default function TripsPage() {
   const [disputingId, setDisputingId] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
   const [disputeBusy, setDisputeBusy] = useState(false);
+  const [payProviders, setPayProviders] = useState<PaymentProviderOption[]>([]);
+  const [payingId, setPayingId] = useState("");
+  const [payChoiceId, setPayChoiceId] = useState("");
+  const [paymentBanner, setPaymentBanner] = useState<"success" | "failed" | "">("");
+  const [payError, setPayError] = useState("");
+
+  useEffect(() => {
+    fetch("/api/payments/providers").then(async (response) => {
+      const result = await response.json() as { providers?: PaymentProviderOption[] };
+      if (response.ok) setPayProviders(result.providers ?? []);
+    }).catch(() => {});
+    // Deferred a tick (matches the same pattern admin/analytics uses)
+    // so this isn't a bare synchronous setState in the effect body —
+    // this state is only ever knowable client-side (query string),
+    // so it has to be read post-mount either way; the server-rendered
+    // and first client render both show no banner, avoiding a
+    // hydration mismatch.
+    queueMicrotask(() => {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("paid")) return;
+      setPaymentBanner(params.get("paid") === "1" ? "success" : "failed");
+      window.history.replaceState(null, "", window.location.pathname);
+    });
+  }, []);
 
   const load = useCallback(() => {
     fetch("/api/bookings").then(async (response) => {
@@ -60,6 +87,16 @@ export default function TripsPage() {
     const response = await fetch(`/api/bookings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled" }) });
     if (response.ok) load();
     setBusyId("");
+  }
+
+  async function startPayment(id: string, provider: string) {
+    setPayingId(id);
+    setPayError("");
+    const response = await fetch(`/api/bookings/${id}/pay`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider }) });
+    const result = await response.json().catch(() => ({})) as { redirectUrl?: string; error?: string };
+    if (response.ok && result.redirectUrl) { window.location.assign(result.redirectUrl); return; }
+    setPayError(result.error ?? t("paymentStartError"));
+    setPayingId("");
   }
 
   async function submitDispute(id: string) {
@@ -81,6 +118,9 @@ export default function TripsPage() {
           <h1>{t("tripsTitleLine1")}<br /><em>{t("tripsTitleLine2")}</em></h1>
         </section>
         <section className="workflow-card wide" style={{ marginTop: 24 }}>
+          {paymentBanner === "success" && <p className="workflow-success">{t("paymentSuccessBanner")}</p>}
+          {paymentBanner === "failed" && <p className="workflow-error">{t("paymentFailedBanner")}</p>}
+          {payError && <p className="workflow-error">{payError}</p>}
           {loading && <SkeletonCards />}
           {!loading && message && (
             <div className="dashboard-message">
@@ -101,7 +141,10 @@ export default function TripsPage() {
 
           {bookings && bookings.length > 0 && (
             <div className="trip-list">
-              {bookings.map((booking) => (
+              {bookings.map((booking) => {
+                const isPaid = (booking.payment_records ?? []).some((record) => record.kind === "charge" && record.status === "paid");
+                const canPay = booking.status === "accepted" && !isPaid && payProviders.length > 0;
+                return (
                 <article className="trip-card" key={booking.id}>
                   <div>
                     <strong>{booking.vehicles ? `${booking.vehicles.make} ${booking.vehicles.model}` : "Vehicle"}</strong>
@@ -109,6 +152,23 @@ export default function TripsPage() {
                   </div>
                   <p><CalendarDays size={14} /> {formatDate(booking.starts_at, localeByLanguage[language])} &ndash; {formatDate(booking.ends_at, localeByLanguage[language])}</p>
                   <p><MapPin size={14} /> {booking.pickup_location} &rarr; {booking.return_location}</p>
+                  {isPaid && <p><CreditCard size={14} /> {t("paymentPaidLabel")}</p>}
+                  {canPay && (
+                    <div className="pay-now-row">
+                      {payChoiceId === booking.id ? (
+                        <>
+                          {payProviders.map((provider) => (
+                            <button key={provider.id} className="workflow-submit coral" type="button" disabled={payingId === booking.id} onClick={() => startPayment(booking.id, provider.id)}>
+                              {payingId === booking.id ? t("paymentStarting") : provider.label}
+                            </button>
+                          ))}
+                          <button className="workflow-link" type="button" onClick={() => setPayChoiceId("")}>{t("cancel")}</button>
+                        </>
+                      ) : (
+                        <button className="workflow-submit coral" type="button" onClick={() => setPayChoiceId(booking.id)}><CreditCard size={16} /> {t("payNowAction")}</button>
+                      )}
+                    </div>
+                  )}
                   <div className="trip-footer">
                     <strong>{formatMoney(booking.total, booking.currency)}</strong>
                     <div className="trip-actions">
@@ -135,7 +195,8 @@ export default function TripsPage() {
                     </div>
                   )}
                 </article>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { LogOut, UserRound } from "lucide-react";
+import { LogOut, ShieldCheck, UserRound } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
@@ -51,6 +51,7 @@ export function AuthStatus() {
       <div className="profile-menu">
         <Link href="/trips"><span>{t("authMyTrips")}</span></Link>
         <Link href="/host/dashboard"><span>{t("authHostDashboard")}</span></Link>
+        <Link href="/verify-id"><ShieldCheck size={18} /><span>{t("authVerifyIdentity")}</span></Link>
       </div>
       <button className="workflow-submit" type="button" onClick={signOut}><LogOut size={17} /> {t("authSignOut")}</button>
     </div>

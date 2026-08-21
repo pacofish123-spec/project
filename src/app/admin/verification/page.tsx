@@ -29,9 +29,11 @@ interface VerificationRecord {
   id: string;
   status: string;
   verification_type: string;
+  provider: string | null;
   created_at: string;
   requester_display_name: string;
   vehicles?: VerificationVehicle | null;
+  document_urls?: string[];
 }
 
 const actionableStatuses = ["not_started", "pending", "in_review"];
@@ -84,6 +86,22 @@ function VehicleBreakdown({ vehicle }: { vehicle: VerificationVehicle }) {
   );
 }
 
+function IdentityBreakdown({ record }: { record: VerificationRecord }) {
+  const photos = record.document_urls ?? [];
+  return (
+    <div className="admin-vehicle-breakdown">
+      {record.provider && <p className="admin-row-meta">Automated check via {record.provider.replace(/_/g, " ")} — result arrives by webhook.</p>}
+      {photos.length > 0 ? (
+        <div className="condition-photo-grid">
+          {photos.map((url, index) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt={`ID document ${index + 1}`} /></a>)}
+        </div>
+      ) : (
+        !record.provider && <p className="admin-row-meta">No document photos uploaded.</p>
+      )}
+    </div>
+  );
+}
+
 export default function AdminVerificationPage() {
   const [records, setRecords] = useState<VerificationRecord[] | null>(null);
   const [message, setMessage] = useState("Loading verification queue...");
@@ -115,8 +133,8 @@ export default function AdminVerificationPage() {
 
   return (
     <section className="workflow-card wide requests-card">
-      <p className="workflow-kicker">Vehicle verification queue</p>
-      <p className="workflow-intro">Vehicles land here after a host requests verification. Nothing publishes until you mark one verified.</p>
+      <p className="workflow-kicker">Verification queue</p>
+      <p className="workflow-intro">Vehicles and renter/host ID checks both land here. Nothing publishes, and no ID stays unverified, until you review it.</p>
       {loading && <SkeletonCards />}
       {!loading && message && <div className="dashboard-message"><ShieldCheck size={22} /><p>{message}</p></div>}
 
@@ -126,19 +144,22 @@ export default function AdminVerificationPage() {
         <div className="trip-list">
           {queue.map((record) => {
             const expanded = expandedId === record.id;
+            const isIdentity = record.verification_type === "identity";
+            const canExpand = Boolean(record.vehicles) || isIdentity;
             return (
               <article className="trip-card" key={record.id}>
                 <div>
-                  <strong>{record.vehicles ? `${record.vehicles.make} ${record.vehicles.model} ${record.vehicles.year ?? ""}` : record.verification_type}</strong>
+                  <strong>{record.vehicles ? `${record.vehicles.make} ${record.vehicles.model} ${record.vehicles.year ?? ""}` : isIdentity ? "ID verification" : record.verification_type}</strong>
                   <span className="trip-status">{record.status.replace("_", " ")}</span>
                 </div>
                 <p className="admin-row-meta">Requested by {record.requester_display_name} · {formatDate(record.created_at)} {record.vehicles?.location_city ? `· ${record.vehicles.location_city}` : ""}</p>
-                {record.vehicles && (
+                {canExpand && (
                   <button className="workflow-link" type="button" onClick={() => setExpandedId(expanded ? "" : record.id)}>
-                    {expanded ? <ChevronUp size={13} style={{ verticalAlign: "-2px" }} /> : <ChevronDown size={13} style={{ verticalAlign: "-2px" }} />} {expanded ? "Hide details" : "View photos & details"}
+                    {expanded ? <ChevronUp size={13} style={{ verticalAlign: "-2px" }} /> : <ChevronDown size={13} style={{ verticalAlign: "-2px" }} />} {expanded ? "Hide details" : isIdentity ? "View ID document" : "View photos & details"}
                   </button>
                 )}
                 {expanded && record.vehicles && <VehicleBreakdown vehicle={record.vehicles} />}
+                {expanded && isIdentity && <IdentityBreakdown record={record} />}
                 <div className="trip-footer">
                   <span />
                   <div className="trip-actions">
@@ -160,7 +181,7 @@ export default function AdminVerificationPage() {
             {history.map((record) => (
               <article className="trip-card" key={record.id}>
                 <div>
-                  <strong>{record.vehicles ? `${record.vehicles.make} ${record.vehicles.model}` : record.verification_type}</strong>
+                  <strong>{record.vehicles ? `${record.vehicles.make} ${record.vehicles.model}` : record.verification_type === "identity" ? "ID verification" : record.verification_type}</strong>
                   <span className={`trip-status ${record.status === "verified" ? "trip-status-accepted" : record.status === "failed" ? "trip-status-declined" : ""}`}>{record.status.replace("_", " ")}</span>
                 </div>
                 <p className="admin-row-meta">Requested by {record.requester_display_name} · {formatDate(record.created_at)}</p>

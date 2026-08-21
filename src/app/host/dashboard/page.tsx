@@ -113,13 +113,13 @@ export default function HostDashboardPage() {
         <div className="dashboard-grid">
           <Link className="dashboard-tile" href="/host/vehicles"><CarFront size={22} /><strong>{t("hostDashboardMyVehicles")}</strong><span>{data ? t("hostDashboardVehiclesCount", { count: data.vehicles?.length ?? 0 }) : t("hostDashboardAddFirstVehicle")}</span></Link>
           <Link className="dashboard-tile" href="/trips"><CalendarDays size={22} /><strong>{t("hostDashboardBookingsRequests")}</strong><span>{data ? t("hostDashboardRequestsCount", { count: data.requests?.length ?? 0 }) : t("hostDashboardSignInToViewRequests")}</span></Link>
-          <div className="dashboard-tile" style={{ cursor: "default" }}>
+          <Link className="dashboard-tile" href="/host/payouts">
             <Wallet size={22} />
             <strong>{t("hostDashboardEarnings")}</strong>
             {earningsLines.length > 0
               ? <span>{earningsLines.map(([currency, amount]) => formatMoney(amount, currency)).join(" · ")}</span>
               : <span>{t("hostDashboardEarningsNone")}</span>}
-          </div>
+          </Link>
           <Link className="dashboard-tile" href="/host/business/new"><Building2 size={22} /><strong>{t("hostDashboardBusinesses")}</strong><span>{data ? t("hostDashboardBusinessMembershipsCount", { count: data.businesses?.length ?? 0 }) : t("hostDashboardCreateOrJoinBusiness")}</span></Link>
           <Link className="dashboard-tile" href="/trust"><MessageCircle size={22} /><strong>{t("hostDashboardTrustVerification")}</strong><span>{t("hostDashboardCompleteNextRequirement")}</span></Link>
         </div>
