@@ -113,8 +113,10 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
             <label>{t("mileageLabel")}<input type="number" min="0" value={mileage} onChange={(event) => setMileage(event.target.value)} /></label>
             <label className="full">{t("notesLabel")}<textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
           </div>
-          <label className="workflow-link" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-            <Camera size={15} /> {uploading ? t("uploadingPhotos") : t("addPhotosLabel")}
+          <label className="photo-upload-dropzone compact" aria-disabled={uploading}>
+            <Camera size={22} />
+            <strong>{uploading ? t("uploadingPhotos") : t("addPhotosLabel")}</strong>
+            <span>{t("photoUploadHint")}</span>
             <input type="file" accept="image/*" multiple hidden disabled={uploading} onChange={handlePhotoSelect} />
           </label>
           {pendingPhotoPaths.length > 0 && <p className="admin-row-meta">{pendingPhotoPaths.length} {t("addPhotosLabel").toLowerCase()}</p>}

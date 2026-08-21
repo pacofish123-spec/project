@@ -71,8 +71,10 @@ function PhotosStep({ vehicleId }: { vehicleId: string }) {
             <h1>{t("hostCarsPhotosTitle")}</h1>
             <p className="workflow-intro">{t("hostCarsPhotosIntro")}</p>
             <div className="step-row"><span className="active" /><span className="active" /></div>
-            <label className="workflow-link" style={{ display: "inline-flex", alignItems: "center", gap: 6, cursor: "pointer" }}>
-              <Camera size={15} /> {uploading ? t("uploadingPhotos") : t("addPhotosLabel")}
+            <label className="photo-upload-dropzone" aria-disabled={uploading}>
+              <Camera size={26} />
+              <strong>{uploading ? t("uploadingPhotos") : t("addPhotosLabel")}</strong>
+              <span>{t("photoUploadHint")}</span>
               <input type="file" accept="image/*" multiple hidden disabled={uploading} onChange={handlePhotoSelect} />
             </label>
             {error && <p className="workflow-error">{error}</p>}

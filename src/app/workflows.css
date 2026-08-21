@@ -104,6 +104,15 @@ html.dark .capability-pill button:hover { background: rgba(255,255,255,.18); }
 .condition-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; margin: 4px 0; }
 .condition-photo-grid a { display: block; aspect-ratio: 1; overflow: hidden; border-radius: 6px; border: 1px solid #d4dfd6; }
 .condition-photo-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-upload-dropzone { display: grid; justify-items: center; gap: 6px; min-height: 160px; margin-bottom: 16px; padding: 30px; border: 2px dashed #b9c7bc; border-radius: 8px; background: #f7f5ef; color: var(--ink); text-align: center; cursor: pointer; }
+.photo-upload-dropzone.compact { min-height: 90px; padding: 16px; margin-bottom: 14px; }
+.photo-upload-dropzone:hover { border-color: var(--coral); background: #fff7f2; }
+.photo-upload-dropzone[aria-disabled="true"] { cursor: not-allowed; opacity: .7; }
+.photo-upload-dropzone svg { color: var(--coral); }
+.photo-upload-dropzone strong { font: 400 17px Georgia, "Noto Serif", "Times New Roman", serif; }
+.photo-upload-dropzone span { color: #78847d; font-size: 12px; }
+html.dark .photo-upload-dropzone { border-color: #385047; background: #1b2823; }
+html.dark .photo-upload-dropzone:hover { background: #2a201a; }
 html.dark .condition-photo-grid a { border-color: #385047; }
 
 .message-thread { display: grid; gap: 10px; max-height: 50vh; overflow-y: auto; padding: 6px 2px 16px; }

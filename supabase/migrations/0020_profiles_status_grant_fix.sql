@@ -1,0 +1,25 @@
+-- yoRento: fix a real regression from 0017.
+--
+-- 0017 revoked the blanket SELECT grant on public.profiles for
+-- anon/authenticated and re-granted only 5 safe columns (id,
+-- display_name, avatar_url, country_code, member_since), scoped to
+-- what public_profiles actually needed. That was correct for the view,
+-- but it missed that the vehicles table's own INSERT policy runs a
+-- plain (non-SECURITY-DEFINER) subquery against profiles.status:
+--
+--   not exists (select 1 from public.profiles where id = auth.uid()
+--               and status <> 'active')
+--
+-- RLS policies always evaluate at the calling role's own privilege
+-- level — unlike the SECURITY DEFINER functions that reference the
+-- same check (create_booking, publish_vehicle), which bypass column
+-- grants entirely and were never affected. Without SELECT on
+-- profiles.status, that subquery itself fails with a bare "permission
+-- denied for table profiles" the moment anyone tries to create a
+-- vehicle — confirmed via a live repro with server-side error logging.
+--
+-- Fix: grant SELECT on the status column too. It's not sensitive PII
+-- like phone/date_of_birth (it's just active/suspended/deleted), and
+-- it's specifically what this policy — and only this policy, verified
+-- by checking every other create policy block in the schema — needs.
+grant select (status) on public.profiles to authenticated;
