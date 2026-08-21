@@ -12,7 +12,7 @@ import { vehicleMakes, modelsForMake, vehicleYears } from "@/lib/vehicle-catalog
 import { vehicleAmenities } from "@/lib/vehicle-amenities";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
 const OTHER_OPTION = "Other";
 
 function PhotosStep({ vehicleId }: { vehicleId: string }) {

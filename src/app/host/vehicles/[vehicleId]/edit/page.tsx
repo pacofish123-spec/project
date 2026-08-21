@@ -12,7 +12,7 @@ import { vehicleAmenities } from "@/lib/vehicle-amenities";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
 
-const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
 const OTHER_OPTION = "Other";
 
 interface Vehicle {

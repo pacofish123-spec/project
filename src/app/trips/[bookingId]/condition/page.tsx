@@ -18,7 +18,7 @@ interface Report {
   acknowledged_at: string | null;
 }
 
-const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
+const MAX_PHOTO_BYTES = 25 * 1024 * 1024;
 
 function PhotoGallery({ paths, stage }: { paths: string[]; stage: "pickup" | "return" }) {
   const { t } = useLanguage();
