@@ -2,14 +2,16 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ClipboardList, CreditCard, FileDown, Gauge, MapPin, MessageCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, CarFront, ClipboardList, CreditCard, FileDown, Gauge, MapPin, MessageCircle } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { SkeletonCards } from "@/components/skeleton";
+import { PublicProfilePopover } from "@/components/public-profile-popover";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
+import { vehiclePhotoUrl } from "@/lib/storage-url";
 import type { TranslationKey } from "@/lib/translations";
 
-interface Booking {
+interface RenterBooking {
   id: string;
   status: string;
   starts_at: string;
@@ -18,8 +20,22 @@ interface Booking {
   return_location: string;
   total: number;
   currency: string;
-  vehicles?: { make: string; model: string; year: number; location_city: string; host_type: string } | null;
+  vehicles?: { make: string; model: string; year: number; location_city: string; host_type: string; photo_paths?: string[] | null } | null;
   payment_records?: Array<{ status: string; kind: string; provider: string }> | null;
+}
+
+interface HostBooking {
+  id: string;
+  status: string;
+  starts_at: string;
+  ends_at: string;
+  pickup_location: string;
+  return_location: string;
+  total: number;
+  currency: string;
+  renter_user_id: string;
+  renter_display_name?: string;
+  vehicles?: { make?: string; model?: string; year?: number; photo_paths?: string[] | null } | null;
 }
 
 interface PaymentProviderOption { id: string; label: string }
@@ -36,9 +52,24 @@ const statusKey: Record<string, TranslationKey> = {
 
 const disputableStatuses = ["accepted", "in_progress", "completed"];
 
+function tripDateRange(startsAt: string, endsAt: string, locale: string) {
+  const start = formatDate(startsAt, locale);
+  const end = formatDate(endsAt, locale);
+  const startTime = new Date(startsAt).toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+  const endTime = new Date(endsAt).toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+  return `${start}, ${startTime} – ${end}, ${endTime}`;
+}
+
+function TripThumb({ photoPaths }: { photoPaths?: string[] | null }) {
+  const url = photoPaths?.[0] ? vehiclePhotoUrl(photoPaths[0]) : null;
+  return <div className="trip-card-thumb" style={url ? { backgroundImage: `url(${url})` } : undefined}>{!url && <CarFront size={22} />}</div>;
+}
+
 export default function TripsPage() {
   const { t, language } = useLanguage();
-  const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const locale = localeByLanguage[language];
+
+  const [bookings, setBookings] = useState<RenterBooking[] | null>(null);
   const [message, setMessage] = useState(t("tripsLoading"));
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
@@ -50,6 +81,13 @@ export default function TripsPage() {
   const [payChoiceId, setPayChoiceId] = useState("");
   const [paymentBanner, setPaymentBanner] = useState<"success" | "failed" | "">("");
   const [payError, setPayError] = useState("");
+
+  // "Cars booked from me" — only shown at all once we know the account
+  // owns at least one vehicle; a pure renter never sees an empty host
+  // section.
+  const [hostBookings, setHostBookings] = useState<HostBooking[] | null>(null);
+  const [hasVehicles, setHasVehicles] = useState(false);
+  const [hostBusyId, setHostBusyId] = useState("");
 
   useEffect(() => {
     fetch("/api/payments/providers").then(async (response) => {
@@ -72,7 +110,7 @@ export default function TripsPage() {
 
   const load = useCallback(() => {
     fetch("/api/bookings").then(async (response) => {
-      const result = await response.json() as { bookings?: Booking[]; error?: string };
+      const result = await response.json() as { bookings?: RenterBooking[]; error?: string };
       if (!response.ok) { setMessage(result.error ?? t("tripsSignInPrompt")); setBookings(null); setLoading(false); return; }
       setBookings(result.bookings ?? []);
       setMessage("");
@@ -80,13 +118,29 @@ export default function TripsPage() {
     }).catch(() => { setMessage(t("tripsLoadError")); setLoading(false); });
   }, [t]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadHost = useCallback(() => {
+    fetch("/api/host/dashboard").then(async (response) => {
+      const result = await response.json() as { requests?: HostBooking[]; vehicles?: unknown[] };
+      if (!response.ok) return;
+      setHostBookings(result.requests ?? []);
+      setHasVehicles((result.vehicles?.length ?? 0) > 0);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => { load(); loadHost(); }, [load, loadHost]);
 
   async function cancelBooking(id: string) {
     setBusyId(id);
     const response = await fetch(`/api/bookings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "cancelled" }) });
     if (response.ok) load();
     setBusyId("");
+  }
+
+  async function respondToRequest(id: string, status: "accepted" | "declined") {
+    setHostBusyId(id);
+    const response = await fetch(`/api/bookings/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
+    if (response.ok) loadHost();
+    setHostBusyId("");
   }
 
   async function startPayment(id: string, provider: string) {
@@ -130,7 +184,7 @@ export default function TripsPage() {
             </div>
           )}
 
-          {bookings && bookings.length === 0 && (
+          {bookings && bookings.length === 0 && !hasVehicles && (
             <div className="empty-results compact">
               <ClipboardList size={30} />
               <h2>{t("tripsEmptyTitle")}</h2>
@@ -139,68 +193,120 @@ export default function TripsPage() {
             </div>
           )}
 
-          {bookings && bookings.length > 0 && (
-            <div className="trip-list">
-              {bookings.map((booking) => {
-                const isPaid = (booking.payment_records ?? []).some((record) => record.kind === "charge" && record.status === "paid");
-                const canPay = booking.status === "accepted" && !isPaid && payProviders.length > 0;
-                return (
-                <article className="trip-card" key={booking.id}>
-                  <div>
-                    <strong>{booking.vehicles ? `${booking.vehicles.make} ${booking.vehicles.model}` : "Vehicle"}</strong>
-                    <span className={`trip-status trip-status-${booking.status}`}>{t(statusKey[booking.status] ?? "statusRequested")}</span>
-                  </div>
-                  <p><CalendarDays size={14} /> {formatDate(booking.starts_at, localeByLanguage[language])} &ndash; {formatDate(booking.ends_at, localeByLanguage[language])}</p>
-                  <p><MapPin size={14} /> {booking.pickup_location} &rarr; {booking.return_location}</p>
-                  {isPaid && <p><CreditCard size={14} /> {t("paymentPaidLabel")}</p>}
-                  {canPay && (
-                    <div className="pay-now-row">
-                      {payChoiceId === booking.id ? (
-                        <>
-                          {payProviders.map((provider) => (
-                            <button key={provider.id} className="workflow-submit coral" type="button" disabled={payingId === booking.id} onClick={() => startPayment(booking.id, provider.id)}>
-                              {payingId === booking.id ? t("paymentStarting") : provider.label}
+          {bookings && (bookings.length > 0 || hasVehicles) && (
+            <>
+              <h2 className="trip-section-title">{t("tripsBookedByMeTitle")}</h2>
+              {bookings.length === 0 && <p className="trip-section-hint">{t("tripsBookedByMeEmpty")}</p>}
+              {bookings.length > 0 && (
+                <div className="trip-list">
+                  {bookings.map((booking) => {
+                    const isPaid = (booking.payment_records ?? []).some((record) => record.kind === "charge" && record.status === "paid");
+                    const canPay = booking.status === "accepted" && !isPaid && payProviders.length > 0;
+                    return (
+                    <article className="trip-card" key={booking.id}>
+                      <div className="trip-card-head">
+                        <TripThumb photoPaths={booking.vehicles?.photo_paths} />
+                        <div className="trip-card-head-text">
+                          <strong>{booking.vehicles ? `${booking.vehicles.make} ${booking.vehicles.model}` : "Vehicle"}</strong>
+                          <span className={`trip-status trip-status-${booking.status}`}>{t(statusKey[booking.status] ?? "statusRequested")}</span>
+                        </div>
+                      </div>
+                      <p><CalendarDays size={14} /> {tripDateRange(booking.starts_at, booking.ends_at, locale)}</p>
+                      <p><MapPin size={14} /> {booking.pickup_location} &rarr; {booking.return_location}</p>
+                      {isPaid && <p><CreditCard size={14} /> {t("paymentPaidLabel")}</p>}
+                      {canPay && (
+                        <div className="pay-now-row">
+                          {payChoiceId === booking.id ? (
+                            <>
+                              {payProviders.map((provider) => (
+                                <button key={provider.id} className="workflow-submit coral" type="button" disabled={payingId === booking.id} onClick={() => startPayment(booking.id, provider.id)}>
+                                  {payingId === booking.id ? t("paymentStarting") : provider.label}
+                                </button>
+                              ))}
+                              <button className="workflow-link" type="button" onClick={() => setPayChoiceId("")}>{t("cancel")}</button>
+                            </>
+                          ) : (
+                            <button className="workflow-submit coral" type="button" onClick={() => setPayChoiceId(booking.id)}><CreditCard size={16} /> {t("payNowAction")}</button>
+                          )}
+                        </div>
+                      )}
+                      <div className="trip-footer">
+                        <strong>{formatMoney(booking.total, booking.currency)}</strong>
+                        <div className="trip-actions">
+                          <Link className="workflow-link" href={`/messages/${booking.id}`}><MessageCircle size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("messageLink")}</Link>
+                          {disputableStatuses.includes(booking.status) && (
+                            <Link className="workflow-link" href={`/trips/${booking.id}/condition`}><Gauge size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("conditionReportLink")}</Link>
+                          )}
+                          {disputableStatuses.includes(booking.status) && (
+                            <a className="workflow-link" href={`/api/bookings/${booking.id}/agreement`}><FileDown size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("downloadAgreementLink")}</a>
+                          )}
+                          {disputableStatuses.includes(booking.status) && (
+                            <button className="workflow-link" type="button" onClick={() => setDisputingId(disputingId === booking.id ? "" : booking.id)}>
+                              <AlertTriangle size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("reportAnIssue")}
                             </button>
-                          ))}
-                          <button className="workflow-link" type="button" onClick={() => setPayChoiceId("")}>{t("cancel")}</button>
-                        </>
-                      ) : (
-                        <button className="workflow-submit coral" type="button" onClick={() => setPayChoiceId(booking.id)}><CreditCard size={16} /> {t("payNowAction")}</button>
+                          )}
+                          {(booking.status === "requested" || booking.status === "accepted") && (
+                            <button className="workflow-link" type="button" disabled={busyId === booking.id} onClick={() => cancelBooking(booking.id)}>
+                              {busyId === booking.id ? t("tripsCancelling") : t("tripsCancel")}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {disputingId === booking.id && (
+                        <div className="message-composer" style={{ marginTop: 4 }}>
+                          <input value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} placeholder={t("disputeReasonPlaceholder")} />
+                          <button className="workflow-submit coral" type="button" disabled={disputeBusy || !disputeReason.trim()} onClick={() => submitDispute(booking.id)}>{t("submitDispute")}</button>
+                        </div>
                       )}
-                    </div>
-                  )}
-                  <div className="trip-footer">
-                    <strong>{formatMoney(booking.total, booking.currency)}</strong>
-                    <div className="trip-actions">
-                      <Link className="workflow-link" href={`/messages/${booking.id}`}><MessageCircle size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("messageLink")}</Link>
-                      {disputableStatuses.includes(booking.status) && (
-                        <Link className="workflow-link" href={`/trips/${booking.id}/condition`}><Gauge size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("conditionReportLink")}</Link>
-                      )}
-                      {disputableStatuses.includes(booking.status) && (
-                        <a className="workflow-link" href={`/api/bookings/${booking.id}/agreement`}><FileDown size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("downloadAgreementLink")}</a>
-                      )}
-                      {disputableStatuses.includes(booking.status) && (
-                        <button className="workflow-link" type="button" onClick={() => setDisputingId(disputingId === booking.id ? "" : booking.id)}>
-                          <AlertTriangle size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("reportAnIssue")}
-                        </button>
-                      )}
-                      {(booking.status === "requested" || booking.status === "accepted") && (
-                        <button className="workflow-link" type="button" disabled={busyId === booking.id} onClick={() => cancelBooking(booking.id)}>
-                          {busyId === booking.id ? t("tripsCancelling") : t("tripsCancel")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  {disputingId === booking.id && (
-                    <div className="message-composer" style={{ marginTop: 4 }}>
-                      <input value={disputeReason} onChange={(event) => setDisputeReason(event.target.value)} placeholder={t("disputeReasonPlaceholder")} />
-                      <button className="workflow-submit coral" type="button" disabled={disputeBusy || !disputeReason.trim()} onClick={() => submitDispute(booking.id)}>{t("submitDispute")}</button>
-                    </div>
-                  )}
-                </article>
-                );
-              })}
-            </div>
+                    </article>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          )}
+
+          {hasVehicles && (
+            <>
+              <h2 className="trip-section-title">{t("tripsBookedFromMeTitle")}</h2>
+              {(!hostBookings || hostBookings.length === 0) && <p className="trip-section-hint">{t("tripsBookedFromMeEmpty")}</p>}
+              {hostBookings && hostBookings.length > 0 && (
+                <div className="trip-list">
+                  {hostBookings.map((booking) => (
+                    <article className="trip-card" key={booking.id}>
+                      <div className="trip-card-head">
+                        <TripThumb photoPaths={booking.vehicles?.photo_paths} />
+                        <div className="trip-card-head-text">
+                          <strong>{booking.vehicles ? `${booking.vehicles.make} ${booking.vehicles.model}` : "Vehicle"}</strong>
+                          <span className={`trip-status trip-status-${booking.status}`}>{t(statusKey[booking.status] ?? "statusRequested")}</span>
+                        </div>
+                      </div>
+                      <p>{t("requestedByLabel")} <PublicProfilePopover userId={booking.renter_user_id} displayName={booking.renter_display_name ?? t("hostAnonymousLabel")} /></p>
+                      <p><CalendarDays size={14} /> {tripDateRange(booking.starts_at, booking.ends_at, locale)}</p>
+                      <p><MapPin size={14} /> {booking.pickup_location} &rarr; {booking.return_location}</p>
+                      <div className="trip-footer">
+                        <strong>{formatMoney(booking.total, booking.currency)}</strong>
+                        <div className="trip-actions">
+                          <Link className="workflow-link" href={`/messages/${booking.id}`}><MessageCircle size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("requestMoreInfoAction")}</Link>
+                          {disputableStatuses.includes(booking.status) && (
+                            <Link className="workflow-link" href={`/trips/${booking.id}/condition`}><Gauge size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("conditionReportLink")}</Link>
+                          )}
+                          {disputableStatuses.includes(booking.status) && (
+                            <a className="workflow-link" href={`/api/bookings/${booking.id}/agreement`}><FileDown size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("downloadAgreementLink")}</a>
+                          )}
+                          {booking.status === "requested" && (
+                            <>
+                              <button className="workflow-link" type="button" disabled={hostBusyId === booking.id} onClick={() => respondToRequest(booking.id, "accepted")}>{t("hostDashboardAccept")}</button>
+                              <button className="workflow-link danger" type="button" disabled={hostBusyId === booking.id} onClick={() => respondToRequest(booking.id, "declined")}>{t("hostDashboardDecline")}</button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </section>
       </div>

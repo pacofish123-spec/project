@@ -113,7 +113,8 @@ export function RentalAgreementDocument({ data }: { data: RentalAgreementData })
           <View style={styles.signCol}><Text style={styles.signLine}>Guest signature / date</Text></View>
         </View>
 
-        <Text style={styles.footer}>yoRento — Dominican Republic · This document was generated automatically when the booking was approved.</Text>
+        <Text style={styles.footer}>yoRento is operated by AsTeje Services SRL, RNC 132-29052-6 · Calle 10 #15, Los Peralejos, Distrito Nacional, Dominican Republic 33195</Text>
+        <Text style={[styles.footer, { bottom: 18 }]}>This document was generated automatically when the booking was approved.</Text>
       </Page>
     </Document>
   );

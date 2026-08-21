@@ -12,7 +12,7 @@ interface BookingInput {
 export async function GET() {
   try {
     const { supabase, user } = await requireCapability("can_rent");
-    const { data, error } = await supabase.from("bookings").select("*, vehicles(make, model, year, location_city, host_type), payment_records(status, kind, provider)").eq("renter_user_id", user.id).order("starts_at", { ascending: false });
+    const { data, error } = await supabase.from("bookings").select("*, vehicles(make, model, year, location_city, host_type, photo_paths), payment_records(status, kind, provider)").eq("renter_user_id", user.id).order("starts_at", { ascending: false });
     if (error) return NextResponse.json({ error: "Unable to load trips." }, { status: 500 });
     return NextResponse.json({ bookings: data });
   } catch (error) {

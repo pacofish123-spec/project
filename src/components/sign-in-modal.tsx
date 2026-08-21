@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { LockKeyhole, X } from "lucide-react";
+import { Brand } from "@/components/brand";
 import { OAuthButtons } from "@/components/oauth-buttons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useLanguage } from "@/lib/i18n";
@@ -35,20 +36,26 @@ export function SignInModal({ onClose, onSuccess, onBeforeLeave }: { onClose: ()
   return (
     <div className="host-popover-overlay" onClick={onClose}>
       <div className="host-popover-card sign-in-modal-card" onClick={(event) => event.stopPropagation()}>
-        <button type="button" className="drawer-close host-popover-close" aria-label={t("close")} onClick={onClose}><X size={18} /></button>
-        <p className="workflow-kicker">{t("bookingSignInPromptKicker")}</p>
-        <h2 className="faq-title" style={{ margin: "2px 0 6px" }}>{t("bookingSignInPromptTitle")}</h2>
-        <p className="workflow-intro" style={{ margin: "0 0 18px" }}>{t("bookingSignInPromptBody")}</p>
-        <OAuthButtons redirectPath={typeof window !== "undefined" ? window.location.pathname : undefined} />
-        {error && <p className="workflow-error">{error}</p>}
-        <form className="workflow-form" onSubmit={handleSubmit}>
-          <label>{t("emailLabel")}<input name="email" type="email" autoComplete="email" required /></label>
-          <label>{t("passwordLabel")}<input name="password" type="password" autoComplete="current-password" required /></label>
-          <button className="workflow-submit coral" disabled={busy} type="submit"><LockKeyhole size={17} />{busy ? t("signInSubmitBusy") : t("signInSubmit")}</button>
-        </form>
-        <div className="workflow-actions">
-          <Link className="workflow-link" href="/recover">{t("signInRecoverLink")}</Link>
-          <Link className="workflow-link" href="/sign-up" onClick={() => onBeforeLeave?.()}>{t("signInCreateAccountLink")}</Link>
+        <div className="sign-in-modal-band">
+          <button type="button" className="sign-in-modal-close" aria-label={t("close")} onClick={onClose}><X size={18} /></button>
+          <Brand light />
+          <p className="sign-in-modal-motto">{t("footerTagline")}</p>
+        </div>
+        <div className="sign-in-modal-body">
+          <p className="workflow-kicker">{t("bookingSignInPromptKicker")}</p>
+          <h2 className="faq-title" style={{ margin: "2px 0 6px" }}>{t("bookingSignInPromptTitle")}</h2>
+          <p className="workflow-intro" style={{ margin: "0 0 18px" }}>{t("bookingSignInPromptBody")}</p>
+          <OAuthButtons redirectPath={typeof window !== "undefined" ? window.location.pathname : undefined} />
+          {error && <p className="workflow-error">{error}</p>}
+          <form className="workflow-form" onSubmit={handleSubmit}>
+            <label>{t("emailLabel")}<input name="email" type="email" autoComplete="email" required /></label>
+            <label>{t("passwordLabel")}<input name="password" type="password" autoComplete="current-password" required /></label>
+            <button className="workflow-submit coral" disabled={busy} type="submit"><LockKeyhole size={17} />{busy ? t("signInSubmitBusy") : t("signInSubmit")}</button>
+          </form>
+          <div className="workflow-actions">
+            <Link className="workflow-link" href="/recover">{t("signInRecoverLink")}</Link>
+            <Link className="workflow-link" href="/sign-up" onClick={() => onBeforeLeave?.()}>{t("signInCreateAccountLink")}</Link>
+          </div>
         </div>
       </div>
     </div>
