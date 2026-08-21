@@ -6,7 +6,7 @@ export async function GET() {
     const { supabase } = await requireCapability("can_manage_platform");
     const { data, error } = await supabase
       .from("verification_records")
-      .select("*, vehicles(make, model, year, location_city, host_type)")
+      .select("*, vehicles(*)")
       .order("created_at", { ascending: false });
     if (error) return NextResponse.json({ error: "Unable to load verification records." }, { status: 500 });
 

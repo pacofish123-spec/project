@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CarFront, MapPin, Sparkles, ShieldCheck } from "lucide-react";
 import { BookingForm, type BookingExtraOption } from "@/components/booking-form";
+import { PhotoLightbox } from "@/components/photo-lightbox";
 import { useLanguage } from "@/lib/i18n";
 import { formatMoney } from "@/lib/format";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
@@ -41,7 +42,9 @@ export function VehicleDetailClient({ vehicleId, initialVehicle }: { vehicleId: 
   const { t } = useLanguage();
   const [vehicle] = useState<Vehicle>(initialVehicle);
   const [extras, setExtras] = useState<BookingExtraOption[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const photos = (vehicle.photo_paths ?? []).map((path) => vehiclePhotoUrl(path));
+  const vehicleLabel = `${vehicle.make} ${vehicle.model}`;
   const selectedAmenities = vehicleAmenities.filter((amenity) => vehicle.amenities?.includes(amenity.value));
   const cleaningPolicyLabel = vehicle.cleaning_policy === "return_clean" ? t("cleaningPolicyReturnClean")
     : vehicle.cleaning_policy === "return_dirty_fee" ? t("cleaningPolicyReturnDirtyFee")
@@ -59,13 +62,20 @@ export function VehicleDetailClient({ vehicleId, initialVehicle }: { vehicleId: 
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/search"><ArrowLeft size={16} /> {t("backLinkSearch")}</Link></div>
         <section className="vehicle-detail">
-          <div className="vehicle-detail-media" style={photos[0] ? { backgroundImage: `url(${photos[0]})` } : undefined}>
+          <button
+            type="button"
+            className="vehicle-detail-media"
+            style={photos[0] ? { backgroundImage: `url(${photos[0]})`, cursor: "zoom-in" } : undefined}
+            disabled={photos.length === 0}
+            aria-label={photos.length > 0 ? `View ${vehicleLabel} photos` : undefined}
+            onClick={() => photos.length > 0 && setLightboxIndex(0)}
+          >
             {!photos[0] && <CarFront size={56} />}
             <div className="vehicle-card-badges">
               {vehicle.verified && <span className="verified-badge verified-status-badge" title={t("verifiedBadgeExplainer")}><ShieldCheck size={13} /> {t("verificationVerified")}</span>}
               {vehicle.promoted && <span className="verified-badge promoted-badge"><Sparkles size={13} /> {t("promotedBadge")}</span>}
             </div>
-          </div>
+          </button>
           <div className="vehicle-detail-body">
             <p className="workflow-kicker">{vehicle.host_type === "individual" ? t("vehiclePersonalOwner") : t("vehicleBusinessLabel")}</p>
             <h1>{vehicle.make} {vehicle.model}</h1>
@@ -73,7 +83,11 @@ export function VehicleDetailClient({ vehicleId, initialVehicle }: { vehicleId: 
             <p className="vehicle-detail-meta"><MapPin size={15} /> {vehicle.location_city}, {vehicle.country_code} <span>&middot;</span> {vehicle.year}</p>
             {photos.length > 1 && (
               <div className="condition-photo-grid" style={{ marginBottom: 18 }}>
-                {photos.slice(1).map((url, index) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt={`${vehicle.make} ${vehicle.model} photo ${index + 2}`} /></a>)}
+                {photos.slice(1).map((url, index) => (
+                  <button type="button" key={url} onClick={() => setLightboxIndex(index + 1)} aria-label={`View ${vehicleLabel} photo ${index + 2}`}>
+                    <img src={url} alt={`${vehicleLabel} photo ${index + 2}`} />
+                  </button>
+                ))}
               </div>
             )}
             {vehicle.description && <p className="workflow-intro">{vehicle.description}</p>}
@@ -100,6 +114,9 @@ export function VehicleDetailClient({ vehicleId, initialVehicle }: { vehicleId: 
           </div>
         </section>
       </div>
+      {lightboxIndex !== null && (
+        <PhotoLightbox photos={photos} index={lightboxIndex} alt={vehicleLabel} onClose={() => setLightboxIndex(null)} onNavigate={setLightboxIndex} />
+      )}
     </main>
   );
 }
