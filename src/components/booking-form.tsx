@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, Minus, Plus, ShieldCheck } from "lucide-react";
 import { CalendarPicker } from "@/components/calendar-picker";
 import { LocationAutocomplete } from "@/components/location-autocomplete";
+import { SignInModal } from "@/components/sign-in-modal";
+import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { formatMoney } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n";
 
@@ -27,6 +29,19 @@ interface Quote {
   currency: string;
 }
 
+interface BookingDraft {
+  startDate: string;
+  endDate: string;
+  startTime: string;
+  endTime: string;
+  pickupLocation: string;
+  returnLocation: string;
+}
+
+function draftKey(vehicleId: string) {
+  return `yorento_pending_booking_${vehicleId}`;
+}
+
 export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicleId: string; status: string; extras: BookingExtraOption[]; countryCode: string }) {
   const router = useRouter();
   const { t } = useLanguage();
@@ -37,13 +52,58 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
   const [pickupLocation, setPickupLocation] = useState("");
   const [returnLocation, setReturnLocation] = useState("");
   const [message, setMessage] = useState("");
+  const [restoredNotice, setRestoredNotice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [selectedExtras, setSelectedExtras] = useState<Record<string, number>>({});
+  const [bookedDates, setBookedDates] = useState<string[]>([]);
+  // undefined = still checking, then true/false
+  const [signedIn, setSignedIn] = useState<boolean | undefined>(undefined);
+  const [showSignIn, setShowSignIn] = useState(false);
 
   const startsAt = startDate ? `${startDate}T${startTime || "00:00"}` : "";
   const endsAt = endDate ? `${endDate}T${endTime || "00:00"}` : "";
+
+  useEffect(() => {
+    fetch(`/api/vehicles/${vehicleId}/availability`).then(async (response) => {
+      const result = await response.json() as { bookedDates?: string[] };
+      if (response.ok) setBookedDates(result.bookedDates ?? []);
+    }).catch(() => {});
+  }, [vehicleId]);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    if (!supabase) { queueMicrotask(() => setSignedIn(false)); return; }
+    supabase.auth.getUser().then(({ data }) => setSignedIn(Boolean(data.user)));
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setSignedIn(Boolean(session?.user)));
+    return () => listener.subscription.unsubscribe();
+  }, []);
+
+  // Restores whatever was mid-booking before a guest went off to sign
+  // in or create an account — sign-in (OAuth or a fresh account) is a
+  // full navigation away from this page, so anything in memory would
+  // otherwise just be gone when they land back here.
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const raw = sessionStorage.getItem(draftKey(vehicleId));
+        if (!raw) return;
+        const draft = JSON.parse(raw) as BookingDraft;
+        setStartDate(draft.startDate ?? "");
+        setEndDate(draft.endDate ?? "");
+        setStartTime(draft.startTime ?? "10:00");
+        setEndTime(draft.endTime ?? "10:00");
+        setPickupLocation(draft.pickupLocation ?? "");
+        setReturnLocation(draft.returnLocation ?? "");
+        sessionStorage.removeItem(draftKey(vehicleId));
+        setRestoredNotice(true);
+      } catch {
+        // sessionStorage can throw in a locked-down browser context — a
+        // restored draft is a nice-to-have, never worth crashing the page.
+      }
+    });
+  }, [vehicleId]);
 
   useEffect(() => {
     if (!startsAt || !endsAt) { queueMicrotask(() => setQuote(null)); return; }
@@ -81,14 +141,23 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
       }, 0)
     : 0;
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setMessage("");
-    if (!startDate || !endDate || !pickupLocation || !returnLocation) {
-      setMessage(t("bookingChooseDatesError"));
-      return;
+  function datesOverlapBooked() {
+    if (!startDate || !endDate) return false;
+    return bookedDates.some((day) => day >= startDate && day <= endDate);
+  }
+
+  function saveDraft() {
+    try {
+      const draft: BookingDraft = { startDate, endDate, startTime, endTime, pickupLocation, returnLocation };
+      sessionStorage.setItem(draftKey(vehicleId), JSON.stringify(draft));
+    } catch {
+      // Same reasoning as the restore side — best-effort only.
     }
+  }
+
+  async function submitBooking() {
     setBusy(true);
+    setMessage("");
     const response = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -111,9 +180,33 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     router.push("/trips");
   }
 
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMessage("");
+    if (!startDate || !endDate || !pickupLocation || !returnLocation) {
+      setMessage(t("bookingChooseDatesError"));
+      return;
+    }
+    // Checked before anything else, guest or not — a guest deserves to
+    // know their dates genuinely don't work before being asked to sign
+    // in at all, not after.
+    if (datesOverlapBooked()) {
+      setMessage(t("bookingDatesUnavailableError"));
+      return;
+    }
+    if (signedIn === false) {
+      saveDraft();
+      setShowSignIn(true);
+      return;
+    }
+    await submitBooking();
+  }
+
   return (
+    <>
     <form className="workflow-form booking-form" onSubmit={handleSubmit}>
-      <CalendarPicker startDate={startDate} endDate={endDate} onChange={(nextStart, nextEnd) => { setStartDate(nextStart); setEndDate(nextEnd); setMessage(""); }} />
+      {restoredNotice && <p className="workflow-success">{t("bookingDraftRestored")}</p>}
+      <CalendarPicker startDate={startDate} endDate={endDate} bookedDates={bookedDates} onChange={(nextStart, nextEnd) => { setStartDate(nextStart); setEndDate(nextEnd); setMessage(""); }} />
       <div className="field-grid">
         <label>{t("bookingPickupTimeLabel")}<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
         <label>{t("bookingReturnTimeLabel")}<input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
@@ -164,5 +257,14 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
       <button className="workflow-submit coral" disabled={busy} type="submit"><CalendarDays size={17} />{busy ? t("bookingSubmitBusy") : t("bookingSubmit")}</button>
       <p className="admin-row-meta"><ShieldCheck size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("vehiclePricingNote")}</p>
     </form>
+
+    {showSignIn && (
+      <SignInModal
+        onClose={() => setShowSignIn(false)}
+        onBeforeLeave={saveDraft}
+        onSuccess={() => { setShowSignIn(false); setSignedIn(true); submitBooking(); }}
+      />
+    )}
+    </>
   );
 }

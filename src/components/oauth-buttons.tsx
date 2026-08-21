@@ -8,7 +8,11 @@ import { useLanguage } from "@/lib/i18n";
 // dashboard (requires a paid Apple Developer account).
 const APPLE_SIGN_IN_ENABLED = false;
 
-export function OAuthButtons() {
+// redirectPath: where /auth/callback should send them back to once
+// signed in — defaults to home. The booking sign-in modal passes the
+// vehicle page's own path so a guest who steps away to authenticate
+// via OAuth lands back where they were instead of on the homepage.
+export function OAuthButtons({ redirectPath }: { redirectPath?: string } = {}) {
   const { t } = useLanguage();
   const [error, setError] = useState("");
 
@@ -16,7 +20,9 @@ export function OAuthButtons() {
     setError("");
     const supabase = createSupabaseBrowserClient();
     if (!supabase) { setError(t("oauthNotConfigured")); return; }
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: `${window.location.origin}/auth/callback` } });
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    if (redirectPath) callbackUrl.searchParams.set("next", redirectPath);
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({ provider, options: { redirectTo: callbackUrl.toString() } });
     if (oauthError) setError(t("oauthProviderUnavailable"));
   }
 

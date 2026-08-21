@@ -51,8 +51,14 @@ export async function GET(request: Request) {
     const coordsValid = Boolean(originLat !== null && originLng !== null && Number.isFinite(originLat) && Number.isFinite(originLng));
 
     const [conflictsResult, distancesResult] = await Promise.all([
+      // public_booking_availability, not the bookings table directly —
+      // bookings' own RLS only lets a participant read their own rows,
+      // so this query returned nothing for a signed-out visitor (or
+      // anyone not party to the conflicting booking) and silently never
+      // filtered anything out for them. The view exposes just enough
+      // (vehicle + date range) to compute conflicts, to every role.
       datesValid
-        ? supabase.from("bookings").select("vehicle_id").in("status", ["requested", "accepted", "in_progress"]).lt("starts_at", endsAt!.toISOString()).gt("ends_at", startsAt!.toISOString())
+        ? supabase.from("public_booking_availability").select("vehicle_id").lt("starts_at", endsAt!.toISOString()).gt("ends_at", startsAt!.toISOString())
         : Promise.resolve({ data: null }),
       coordsValid
         ? supabase.rpc("vehicles_with_distance", { origin_lat: originLat, origin_lng: originLng })
