@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CarFront } from "lucide-react";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatMoney } from "@/lib/format";
 
 interface AdminVehicle {
@@ -31,16 +32,18 @@ const nextStatusActions: Record<string, Array<{ label: string; status: string }>
 export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] = useState<AdminVehicle[] | null>(null);
   const [message, setMessage] = useState("Loading vehicles...");
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
   const [busyId, setBusyId] = useState("");
 
   function load() {
     fetch("/api/admin/vehicles").then(async (response) => {
       const result = await response.json() as { vehicles?: AdminVehicle[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? "Unable to load vehicles."); return; }
+      if (!response.ok) { setMessage(result.error ?? "Unable to load vehicles."); setLoading(false); return; }
       setVehicles(result.vehicles ?? []);
       setMessage("");
-    }).catch(() => setMessage("Unable to load vehicles."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load vehicles."); setLoading(false); });
   }
 
   useEffect(() => { load(); }, []);
@@ -72,7 +75,8 @@ export default function AdminVehiclesPage() {
           <button key={option} className={filter === option ? "active" : ""} type="button" onClick={() => setFilter(option)}>{option.replace("_", " ")}</button>
         ))}
       </div>
-      {message && <div className="dashboard-message"><CarFront size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonCards />}
+      {!loading && message && <div className="dashboard-message"><CarFront size={22} /><p>{message}</p></div>}
       {vehicles !== null && visible.length === 0 && <p className="admin-row-meta">No vehicles match this filter.</p>}
       {visible.length > 0 && (
         <div className="trip-list">

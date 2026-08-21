@@ -15,7 +15,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   return (
     <>
       <AppHeader />
-      <main className="workflow-page">
+      <main className="workflow-page tint-wash-ocean">
         <div className="page-width">
           <p className="admin-area-kicker"><ShieldCheck size={14} /> yoRento Admin</p>
           <AdminTabs />

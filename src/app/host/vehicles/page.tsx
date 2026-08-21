@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, CarFront, Plus, ShieldCheck, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
+import { SkeletonVehicleRows } from "@/components/skeleton";
 import { useLanguage } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/translations";
 import { formatMoney } from "@/lib/format";
@@ -114,7 +115,7 @@ export default function HostVehiclesPage() {
           </section>
 
           {message && <p className="workflow-error">{message}</p>}
-          {vehicles === null && !message && <p className="workflow-kicker">{t("hostDashboardLoading")}</p>}
+          {vehicles === null && !message && <SkeletonVehicleRows />}
           {vehicles && vehicles.length === 0 && <p className="legal-note">{t("noVehiclesYet")}</p>}
 
           {vehicles && vehicles.length > 0 && (

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Building2, CalendarDays, CarFront, MessageCircle, Plus, ShieldCheck, Wallet } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
+import { SkeletonTiles } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
 
@@ -50,6 +51,7 @@ export default function HostDashboardPage() {
   const { t, language } = useLanguage();
   const [data, setData] = useState<DashboardData | null>(null);
   const [message, setMessage] = useState(t("hostDashboardLoading"));
+  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
 
   const load = useCallback(() => {
@@ -57,7 +59,8 @@ export default function HostDashboardPage() {
       const result = await response.json() as DashboardData & { error?: string };
       if (!response.ok) setMessage(result.error ?? t("hostDashboardSignInPrompt"));
       else { setData(result); setMessage(""); }
-    }).catch(() => setMessage(t("hostDashboardLoadError")));
+      setLoading(false);
+    }).catch(() => { setMessage(t("hostDashboardLoadError")); setLoading(false); });
   }, [t]);
 
   useEffect(() => { load(); }, [load]);
@@ -102,8 +105,11 @@ export default function HostDashboardPage() {
           <Link className="workflow-submit coral" href="/host/cars/new"><Plus size={17} /> {t("hostDashboardAddVehicle")}</Link>
         </section>
 
-        {message && <div className="workflow-card dashboard-message"><ShieldCheck size={23} /><p>{message}</p><Link className="workflow-link" href="/sign-in">{t("signIn")} <ArrowRight size={14} /></Link></div>}
+        {!loading && message && <div className="workflow-card dashboard-message"><ShieldCheck size={23} /><p>{message}</p><Link className="workflow-link" href="/sign-in">{t("signIn")} <ArrowRight size={14} /></Link></div>}
 
+        {loading && <SkeletonTiles count={5} />}
+
+        {!loading && (
         <div className="dashboard-grid">
           <Link className="dashboard-tile" href="/host/vehicles"><CarFront size={22} /><strong>{t("hostDashboardMyVehicles")}</strong><span>{data ? t("hostDashboardVehiclesCount", { count: data.vehicles?.length ?? 0 }) : t("hostDashboardAddFirstVehicle")}</span></Link>
           <Link className="dashboard-tile" href="/trips"><CalendarDays size={22} /><strong>{t("hostDashboardBookingsRequests")}</strong><span>{data ? t("hostDashboardRequestsCount", { count: data.requests?.length ?? 0 }) : t("hostDashboardSignInToViewRequests")}</span></Link>
@@ -117,6 +123,7 @@ export default function HostDashboardPage() {
           <Link className="dashboard-tile" href="/host/business/new"><Building2 size={22} /><strong>{t("hostDashboardBusinesses")}</strong><span>{data ? t("hostDashboardBusinessMembershipsCount", { count: data.businesses?.length ?? 0 }) : t("hostDashboardCreateOrJoinBusiness")}</span></Link>
           <Link className="dashboard-tile" href="/trust"><MessageCircle size={22} /><strong>{t("hostDashboardTrustVerification")}</strong><span>{t("hostDashboardCompleteNextRequirement")}</span></Link>
         </div>
+        )}
 
         {pendingRequests.length > 0 && (
           <section className="workflow-card wide requests-card">

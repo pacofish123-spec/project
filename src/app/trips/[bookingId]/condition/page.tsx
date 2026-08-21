@@ -164,7 +164,7 @@ export default function ConditionReportPage({ params }: { params: Promise<{ book
   const returnReport = reports.find((report) => report.stage === "return");
 
   return (
-    <main className="workflow-page">
+    <main className="workflow-page tint-wash-coral">
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/trips"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link></div>
         <p className="workflow-kicker" style={{ marginBottom: 4 }}>{t("conditionReportTitle")}</p>

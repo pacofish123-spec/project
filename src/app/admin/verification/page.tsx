@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
 
@@ -86,16 +87,18 @@ function VehicleBreakdown({ vehicle }: { vehicle: VerificationVehicle }) {
 export default function AdminVerificationPage() {
   const [records, setRecords] = useState<VerificationRecord[] | null>(null);
   const [message, setMessage] = useState("Loading verification queue...");
+  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [expandedId, setExpandedId] = useState("");
 
   function load() {
     fetch("/api/admin/verification").then(async (response) => {
       const result = await response.json() as { records?: VerificationRecord[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? "Unable to load the verification queue."); return; }
+      if (!response.ok) { setMessage(result.error ?? "Unable to load the verification queue."); setLoading(false); return; }
       setRecords(result.records ?? []);
       setMessage("");
-    }).catch(() => setMessage("Unable to load the verification queue."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load the verification queue."); setLoading(false); });
   }
 
   useEffect(() => { load(); }, []);
@@ -114,7 +117,8 @@ export default function AdminVerificationPage() {
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">Vehicle verification queue</p>
       <p className="workflow-intro">Vehicles land here after a host requests verification. Nothing publishes until you mark one verified.</p>
-      {message && <div className="dashboard-message"><ShieldCheck size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonCards />}
+      {!loading && message && <div className="dashboard-message"><ShieldCheck size={22} /><p>{message}</p></div>}
 
       {records !== null && queue.length === 0 && <p className="admin-row-meta">Nothing waiting on review right now.</p>}
 

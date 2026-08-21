@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, BarChart3, Building2, CalendarClock, CarFront, CheckCircle2, Copy, LayoutDashboard, ShieldCheck, Users, Wallet } from "lucide-react";
+import { SkeletonTiles } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 
 interface Overview {
@@ -27,16 +28,19 @@ interface Overview {
 export default function AdminOverviewPage() {
   const [overview, setOverview] = useState<Overview | null>(null);
   const [message, setMessage] = useState("Loading overview...");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/overview").then(async (response) => {
       const result = await response.json() as Overview & { error?: string };
-      if (!response.ok) { setMessage((result as { error?: string }).error ?? "Unable to load overview."); return; }
+      if (!response.ok) { setMessage((result as { error?: string }).error ?? "Unable to load overview."); setLoading(false); return; }
       setOverview(result);
       setMessage("");
-    }).catch(() => setMessage("Unable to load overview."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load overview."); setLoading(false); });
   }, []);
 
+  if (loading) return <SkeletonTiles count={9} />;
   if (message) return <div className="dashboard-message"><LayoutDashboard size={22} /><p>{message}</p></div>;
   if (!overview) return null;
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Apple, Bot, Eye, Globe2, MonitorSmartphone, Users } from "lucide-react";
 import { EarningsChart } from "@/components/earnings-chart";
+import { SkeletonTiles } from "@/components/skeleton";
 
 interface WebAnalytics {
   totalViews: number;
@@ -34,15 +35,17 @@ export default function AdminAnalyticsPage() {
   const [days, setDays] = useState(30);
   const [data, setData] = useState<Analytics | null>(null);
   const [message, setMessage] = useState("Loading analytics...");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    queueMicrotask(() => setMessage("Loading analytics..."));
+    queueMicrotask(() => { setMessage("Loading analytics..."); setLoading(true); });
     fetch(`/api/admin/analytics?days=${days}`).then(async (response) => {
       const result = await response.json() as Analytics & { error?: string };
-      if (!response.ok) { setMessage((result as { error?: string }).error ?? "Unable to load analytics."); return; }
+      if (!response.ok) { setMessage((result as { error?: string }).error ?? "Unable to load analytics."); setLoading(false); return; }
       setData(result);
       setMessage("");
-    }).catch(() => setMessage("Unable to load analytics."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load analytics."); setLoading(false); });
   }, [days]);
 
   return (
@@ -53,7 +56,8 @@ export default function AdminAnalyticsPage() {
         ))}
       </div>
 
-      {message && <div className="dashboard-message"><Globe2 size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonTiles count={3} />}
+      {!loading && message && <div className="dashboard-message"><Globe2 size={22} /><p>{message}</p></div>}
 
       {data && (
         <>

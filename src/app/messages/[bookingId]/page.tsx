@@ -56,7 +56,7 @@ export default function MessagesPage({ params }: { params: Promise<{ bookingId: 
   return (
     <>
       <AppHeader />
-      <main className="workflow-page">
+      <main className="workflow-page tint-wash-ocean">
       <div className="page-width">
         <div className="workflow-nav"><Link className="workflow-back" href="/trips"><ArrowLeft size={16} /> {t("backLinkBrowse")}</Link></div>
         <section className="workflow-card">

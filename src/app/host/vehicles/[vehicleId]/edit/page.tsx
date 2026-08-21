@@ -149,7 +149,7 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
   return (
     <>
       <AppHeader />
-      <main className="workflow-page">
+      <main className="workflow-page tint-wash-coral">
         <div className="page-width">
           <div className="workflow-nav"><Link className="workflow-back" href="/host/vehicles"><ArrowLeft size={16} /> {t("hostDashboardMyVehicles")}</Link></div>
           <section className="workflow-card wide">

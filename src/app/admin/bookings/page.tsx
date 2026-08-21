@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarClock } from "lucide-react";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 
 interface AdminBooking {
@@ -21,16 +22,18 @@ const filters = ["all", "requested", "accepted", "in_progress", "disputed", "com
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<AdminBooking[] | null>(null);
   const [message, setMessage] = useState("Loading bookings...");
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
   const [busyId, setBusyId] = useState("");
 
   function load() {
     fetch("/api/admin/bookings").then(async (response) => {
       const result = await response.json() as { bookings?: AdminBooking[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? "Unable to load bookings."); return; }
+      if (!response.ok) { setMessage(result.error ?? "Unable to load bookings."); setLoading(false); return; }
       setBookings(result.bookings ?? []);
       setMessage("");
-    }).catch(() => setMessage("Unable to load bookings."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load bookings."); setLoading(false); });
   }
 
   useEffect(() => { load(); }, []);
@@ -52,7 +55,8 @@ export default function AdminBookingsPage() {
           <button key={option} className={filter === option ? "active" : ""} type="button" onClick={() => setFilter(option)}>{option.replace("_", " ")}</button>
         ))}
       </div>
-      {message && <div className="dashboard-message"><CalendarClock size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonCards />}
+      {!loading && message && <div className="dashboard-message"><CalendarClock size={22} /><p>{message}</p></div>}
       {bookings !== null && visible.length === 0 && <p className="admin-row-meta">No bookings match this filter.</p>}
       {visible.length > 0 && (
         <div className="trip-list">

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowUp, Wallet } from "lucide-react";
 import { EarningsChart } from "@/components/earnings-chart";
+import { SkeletonRows } from "@/components/skeleton";
 
 interface Totals { gross: number; platformFee: number; bookings: number }
 interface EarningsResponse {
@@ -74,6 +75,7 @@ export default function AdminEarningsPage() {
   const [currency, setCurrency] = useState("");
   const [data, setData] = useState<EarningsResponse | null>(null);
   const [message, setMessage] = useState("Loading earnings...");
+  const [loading, setLoading] = useState(true);
   const [showTable, setShowTable] = useState(false);
 
   const range = useMemo(() => computeRange(rangePreset, customStart, customEnd), [rangePreset, customStart, customEnd]);
@@ -83,11 +85,12 @@ export default function AdminEarningsPage() {
     if (currency) params.set("currency", currency);
     fetch(`/api/admin/earnings?${params}`).then(async (response) => {
       const result = await response.json() as EarningsResponse & { error?: string };
-      if (!response.ok) { setMessage((result as { error?: string }).error ?? "Unable to load earnings."); return; }
+      if (!response.ok) { setMessage((result as { error?: string }).error ?? "Unable to load earnings."); setLoading(false); return; }
       setData(result);
       if (!currency) setCurrency(result.currency);
       setMessage("");
-    }).catch(() => setMessage("Unable to load earnings."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load earnings."); setLoading(false); });
   }, [granularity, range.start, range.end, currency]);
 
   const points = (data?.series ?? []).map((row) => ({ label: bucketLabel(row.bucket, granularity), value: row.platformFee }));
@@ -119,7 +122,8 @@ export default function AdminEarningsPage() {
         </div>
       )}
 
-      {message && <div className="dashboard-message"><Wallet size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonRows count={5} />}
+      {!loading && message && <div className="dashboard-message"><Wallet size={22} /><p>{message}</p></div>}
 
       {data && (
         <>

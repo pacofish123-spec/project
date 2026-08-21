@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ClipboardList, Gauge, MapPin, MessageCircle } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
 import type { TranslationKey } from "@/lib/translations";
@@ -36,6 +37,7 @@ export default function TripsPage() {
   const { t, language } = useLanguage();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [message, setMessage] = useState(t("tripsLoading"));
+  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
   const [disputingId, setDisputingId] = useState("");
   const [disputeReason, setDisputeReason] = useState("");
@@ -44,10 +46,11 @@ export default function TripsPage() {
   const load = useCallback(() => {
     fetch("/api/bookings").then(async (response) => {
       const result = await response.json() as { bookings?: Booking[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? t("tripsSignInPrompt")); setBookings(null); return; }
+      if (!response.ok) { setMessage(result.error ?? t("tripsSignInPrompt")); setBookings(null); setLoading(false); return; }
       setBookings(result.bookings ?? []);
       setMessage("");
-    }).catch(() => setMessage(t("tripsLoadError")));
+      setLoading(false);
+    }).catch(() => { setMessage(t("tripsLoadError")); setLoading(false); });
   }, [t]);
 
   useEffect(() => { load(); }, [load]);
@@ -78,7 +81,8 @@ export default function TripsPage() {
           <h1>{t("tripsTitleLine1")}<br /><em>{t("tripsTitleLine2")}</em></h1>
         </section>
         <section className="workflow-card wide" style={{ marginTop: 24 }}>
-          {message && (
+          {loading && <SkeletonCards />}
+          {!loading && message && (
             <div className="dashboard-message">
               <ClipboardList size={22} />
               <p>{message}</p>

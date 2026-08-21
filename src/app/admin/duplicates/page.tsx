@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Copy } from "lucide-react";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatDate } from "@/lib/format";
 
 interface Candidate {
@@ -17,15 +18,17 @@ interface Candidate {
 export default function AdminDuplicatesPage() {
   const [candidates, setCandidates] = useState<Candidate[] | null>(null);
   const [message, setMessage] = useState("Loading duplicate-account candidates...");
+  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
 
   function load() {
     fetch("/api/admin/duplicates").then(async (response) => {
       const result = await response.json() as { candidates?: Candidate[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? "Unable to load candidates."); return; }
+      if (!response.ok) { setMessage(result.error ?? "Unable to load candidates."); setLoading(false); return; }
       setCandidates(result.candidates ?? []);
       setMessage("");
-    }).catch(() => setMessage("Unable to load candidates."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load candidates."); setLoading(false); });
   }
 
   useEffect(() => { load(); }, []);
@@ -41,7 +44,8 @@ export default function AdminDuplicatesPage() {
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">Duplicate-account review ({candidates?.length ?? 0})</p>
       <p className="workflow-intro">Flagged automatically when a sign-up&apos;s verified email/phone, or a strong name-and-birth-date match, points at an account that already exists. Nothing here is merged automatically — accept, reject, or mark reviewed.</p>
-      {message && <div className="dashboard-message"><Copy size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonCards />}
+      {!loading && message && <div className="dashboard-message"><Copy size={22} /><p>{message}</p></div>}
       {candidates !== null && candidates.length === 0 && <p className="admin-row-meta">No duplicate-account signals right now.</p>}
       {candidates && candidates.length > 0 && (
         <div className="trip-list">

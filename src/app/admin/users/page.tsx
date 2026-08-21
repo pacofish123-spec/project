@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Ban, RotateCcw, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatDate } from "@/lib/format";
 import type { Capability } from "@/lib/domain";
 
@@ -39,6 +40,7 @@ function label(capability: string) {
 export default function AdminDirectoryPage() {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [message, setMessage] = useState("Loading directory...");
+  const [loading, setLoading] = useState(true);
   const [busyKey, setBusyKey] = useState("");
   const [pendingGrant, setPendingGrant] = useState<Record<string, Capability | "">>({});
   const [error, setError] = useState("");
@@ -47,10 +49,11 @@ export default function AdminDirectoryPage() {
   function load() {
     fetch("/api/admin/users").then(async (response) => {
       const result = await response.json() as { users?: AdminUser[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? "Unable to load the directory."); return; }
+      if (!response.ok) { setMessage(result.error ?? "Unable to load the directory."); setLoading(false); return; }
       setUsers(result.users ?? []);
       setMessage("");
-    }).catch(() => setMessage("Unable to load the directory."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load the directory."); setLoading(false); });
   }
 
   useEffect(() => { load(); }, []);
@@ -98,7 +101,8 @@ export default function AdminDirectoryPage() {
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">Users ({visible.length}{query ? ` of ${users?.length ?? 0}` : ""})</p>
       <input className="location-search user-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name or email…" aria-label="Search users" />
-      {message && <div className="dashboard-message"><Users size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonCards />}
+      {!loading && message && <div className="dashboard-message"><Users size={22} /><p>{message}</p></div>}
       {error && <p className="workflow-error">{error}</p>}
       {users !== null && visible.length === 0 && !message && <p className="admin-row-meta">No users match this search.</p>}
       {visible.length > 0 && (

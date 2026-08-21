@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
 
 interface ConditionReport {
@@ -27,15 +28,17 @@ interface Dispute {
 export default function AdminDisputesPage() {
   const [disputes, setDisputes] = useState<Dispute[] | null>(null);
   const [message, setMessage] = useState("Loading disputes...");
+  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
 
   function load() {
     fetch("/api/admin/disputes").then(async (response) => {
       const result = await response.json() as { disputes?: Dispute[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? "Unable to load disputes."); return; }
+      if (!response.ok) { setMessage(result.error ?? "Unable to load disputes."); setLoading(false); return; }
       setDisputes(result.disputes ?? []);
       setMessage("");
-    }).catch(() => setMessage("Unable to load disputes."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load disputes."); setLoading(false); });
   }
 
   useEffect(() => { load(); }, []);
@@ -50,7 +53,8 @@ export default function AdminDisputesPage() {
   return (
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">Open disputes ({disputes?.length ?? 0})</p>
-      {message && <div className="dashboard-message"><AlertTriangle size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonCards />}
+      {!loading && message && <div className="dashboard-message"><AlertTriangle size={22} /><p>{message}</p></div>}
       {disputes !== null && disputes.length === 0 && <p className="admin-row-meta">No open disputes right now.</p>}
       {disputes && disputes.length > 0 && (
         <div className="trip-list">

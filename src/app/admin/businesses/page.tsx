@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Building2 } from "lucide-react";
+import { SkeletonCards } from "@/components/skeleton";
 import { formatDate } from "@/lib/format";
 
 interface AdminBusiness {
@@ -20,20 +21,23 @@ interface AdminBusiness {
 export default function AdminBusinessesPage() {
   const [businesses, setBusinesses] = useState<AdminBusiness[] | null>(null);
   const [message, setMessage] = useState("Loading businesses...");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("/api/admin/businesses").then(async (response) => {
       const result = await response.json() as { businesses?: AdminBusiness[]; error?: string };
-      if (!response.ok) { setMessage(result.error ?? "Unable to load businesses."); return; }
+      if (!response.ok) { setMessage(result.error ?? "Unable to load businesses."); setLoading(false); return; }
       setBusinesses(result.businesses ?? []);
       setMessage("");
-    }).catch(() => setMessage("Unable to load businesses."));
+      setLoading(false);
+    }).catch(() => { setMessage("Unable to load businesses."); setLoading(false); });
   }, []);
 
   return (
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">All businesses ({businesses?.length ?? 0})</p>
-      {message && <div className="dashboard-message"><Building2 size={22} /><p>{message}</p></div>}
+      {loading && <SkeletonCards />}
+      {!loading && message && <div className="dashboard-message"><Building2 size={22} /><p>{message}</p></div>}
       {businesses !== null && businesses.length === 0 && <p className="admin-row-meta">No businesses have been created yet.</p>}
       {businesses && businesses.length > 0 && (
         <div className="trip-list">
