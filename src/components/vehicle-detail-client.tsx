@@ -145,7 +145,7 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
             <p className="vehicle-detail-meta"><MapPin size={15} /> {vehicle.location_city}, {vehicle.country_code} <span>&middot;</span> {vehicle.year}</p>
             <p className="vehicle-detail-price"><strong>{formatMoney(vehicle.daily_price, vehicle.base_currency)}</strong> {t("perDaySuffix")}</p>
             <div className="vehicle-detail-trust"><ShieldCheck size={16} /> {t("vehiclePricingNote")}</div>
-            <BookingForm vehicleId={vehicle.id} status={vehicle.status} extras={extras} />
+            <BookingForm vehicleId={vehicle.id} status={vehicle.status} extras={extras} countryCode={vehicle.country_code} />
           </div>
         </section>
       </div>

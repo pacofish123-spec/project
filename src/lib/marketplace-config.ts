@@ -15,7 +15,7 @@ export const countries: CountryConfig[] = [
     timezone: "America/Santo_Domingo",
     measurementSystem: "metric",
     destinations: ["Santo Domingo", "Punta Cana", "Bávaro", "Samaná", "Las Terrenas", "Puerto Plata", "Santiago", "La Romana", "Boca Chica"],
-    airports: ["SDQ", "PUJ", "STI", "POP"],
+    airports: ["SDQ", "PUJ", "STI", "POP", "AZS", "LRM"],
   },
   {
     code: "US",

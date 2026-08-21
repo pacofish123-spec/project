@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Minus, Plus, ShieldCheck } from "lucide-react";
 import { CalendarPicker } from "@/components/calendar-picker";
+import { LocationAutocomplete } from "@/components/location-autocomplete";
 import { formatMoney } from "@/lib/format";
 import { useLanguage } from "@/lib/i18n";
 
@@ -26,7 +27,7 @@ interface Quote {
   currency: string;
 }
 
-export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; status: string; extras: BookingExtraOption[] }) {
+export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicleId: string; status: string; extras: BookingExtraOption[]; countryCode: string }) {
   const router = useRouter();
   const { t } = useLanguage();
   const [startDate, setStartDate] = useState("");
@@ -119,8 +120,8 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
       </div>
       <p className="field-hint" style={{ margin: "-9px 0 4px" }}>{t("bookingTimeHint")}</p>
       <div className="field-grid">
-        <label>{t("bookingPickupLabel")}<input value={pickupLocation} onChange={(event) => setPickupLocation(event.target.value)} placeholder={t("bookingPickupPlaceholder")} required /></label>
-        <label>{t("bookingReturnLabel")}<input value={returnLocation} onChange={(event) => setReturnLocation(event.target.value)} placeholder={t("bookingReturnPlaceholder")} required /></label>
+        <label>{t("bookingPickupLabel")}<LocationAutocomplete value={pickupLocation} onChange={setPickupLocation} countryCode={countryCode} placeholder={t("bookingPickupPlaceholder")} required /></label>
+        <label>{t("bookingReturnLabel")}<LocationAutocomplete value={returnLocation} onChange={setReturnLocation} countryCode={countryCode} placeholder={t("bookingReturnPlaceholder")} required /></label>
       </div>
 
       {extras.length > 0 && (
