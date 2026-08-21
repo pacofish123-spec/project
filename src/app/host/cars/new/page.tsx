@@ -56,6 +56,12 @@ function PhotosStep({ vehicleId }: { vehicleId: string }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ photoPaths }),
       });
+      // Photos are the last thing a host would add before wanting a
+      // review — auto-request verification here instead of making them
+      // find "Request verification" again on a separate page. Fire-
+      // and-forget: this is a nice-to-have, not something that should
+      // block landing on the dashboard if it fails.
+      fetch(`/api/vehicles/${vehicleId}/verification`, { method: "POST" }).catch(() => {});
     }
     router.push("/host/dashboard");
   }
