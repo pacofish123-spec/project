@@ -34,6 +34,14 @@ html.dark .workflow-intro, html.dark .workflow-form label, html.dark .workflow-c
 .calendar-picker { display: grid; gap: 13px; }.calendar-toolbar { display: flex; align-items: center; justify-content: space-between; }.calendar-toolbar strong { font: 400 21px Georgia, "Noto Serif", "Times New Roman", serif; }.calendar-toolbar button { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #d4dfd6; border-radius: 50%; background: transparent; color: var(--ink); }.calendar-weekdays, .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }.calendar-weekdays span { color: #829088; font-size: 10px; text-align: center; text-transform: uppercase; }.calendar-day, .calendar-empty { min-height: 44px; }.calendar-day { border: 0; border-radius: 50%; background: transparent; color: var(--ink); font-size: 13px; }.calendar-day:hover:not(:disabled) { background: #eaf2eb; }.calendar-day.selected { background: var(--coral); color: #fff; font-weight: 700; }.calendar-day.in-range { border-radius: 5px; background: #fbe4d9; color: var(--ink); }.calendar-day:disabled { color: #c2ccc4; cursor: not-allowed; }
 .calendar-day.booked { text-decoration: line-through; color: #9aa79e; background: #eef1ec; }
 html.dark .calendar-day.booked { color: #5c6961; background: #22322b; }
+.legal-document-card h1 { margin: 0 0 6px; color: var(--ink); font: 400 clamp(34px, 5vw, 52px)/1.05 Georgia, "Noto Serif", "Times New Roman", serif; letter-spacing: -.04em; }
+.legal-document-section { margin-top: 26px; padding-top: 22px; border-top: 1px solid #e4e8e1; }
+.legal-document-section:first-of-type { margin-top: 0; padding-top: 0; border-top: 0; }
+.legal-document-section h2 { margin: 0 0 10px; color: var(--ink); font: 400 21px Georgia, "Noto Serif", "Times New Roman", serif; }
+.legal-document-section p { margin: 0 0 12px; color: #4d5952; font-size: 14px; line-height: 1.7; }
+.legal-document-section p:last-child { margin-bottom: 0; }
+html.dark .legal-document-section { border-color: #385047; }
+html.dark .legal-document-section p { color: #b8c6bc; }
 .fuel-level-picker { display: flex; gap: 8px; margin-top: 8px; }
 .fuel-level-option { flex: 1; min-height: 46px; border: 1px solid #d4dfd6; border-radius: 6px; background: transparent; color: var(--ink); font-size: 15px; font-weight: 700; }
 .fuel-level-option.active { border-color: var(--coral); background: var(--coral); color: #fff; }

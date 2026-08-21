@@ -128,7 +128,6 @@ export function HomeClient({ initialVehicles, activeCities }: { initialVehicles:
 
       <section className="host-cta page-width" id="host"><div><p className="eyebrow">{t("forOwnersBusinesses")}</p><h2>{t("rentCarLine1")}<br /><em>{t("rentCarLine2")}</em></h2><p>{t("hostCtaBody")}</p><a className="button-light" href="/host">{t("becomeAHost")} <ArrowRight size={16} /></a></div><div className="host-stat"><span>01</span><strong>{t("hostStat1Line1")}<br />{t("hostStat1Line2")}</strong><span>02</span><strong>{t("hostStat2Line1")}<br />{t("hostStat2Line2")}</strong></div></section>
 
-      <footer className="site-footer"><div className="page-width footer-inner"><a className="brand" href="#top"><Brand light /></a><p>{t("footerTagline")}</p><div><a href="/about">{t("about")}</a><a href="/host">{t("host")}</a><a href="/trust">{t("trustSafety")}</a><LanguageSwitcher /></div></div></footer>
     </main>
   );
 }

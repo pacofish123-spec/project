@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ClipboardList, CreditCard, Gauge, MapPin, MessageCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, ClipboardList, CreditCard, FileDown, Gauge, MapPin, MessageCircle } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -175,6 +175,9 @@ export default function TripsPage() {
                       <Link className="workflow-link" href={`/messages/${booking.id}`}><MessageCircle size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("messageLink")}</Link>
                       {disputableStatuses.includes(booking.status) && (
                         <Link className="workflow-link" href={`/trips/${booking.id}/condition`}><Gauge size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("conditionReportLink")}</Link>
+                      )}
+                      {disputableStatuses.includes(booking.status) && (
+                        <a className="workflow-link" href={`/api/bookings/${booking.id}/agreement`}><FileDown size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("downloadAgreementLink")}</a>
                       )}
                       {disputableStatuses.includes(booking.status) && (
                         <button className="workflow-link" type="button" onClick={() => setDisputingId(disputingId === booking.id ? "" : booking.id)}>

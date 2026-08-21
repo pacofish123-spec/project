@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authorization";
+import { deliverRentalAgreement } from "@/lib/rental-agreement-service";
 
 const allowedStatuses = ["accepted", "declined", "cancelled"] as const;
 
@@ -25,6 +26,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
         return NextResponse.json({ error: "This booking is no longer awaiting a decision." }, { status: 409 });
       }
       return NextResponse.json({ error: "Unable to update booking." }, { status: 500 });
+    }
+
+    // A booking just went from "requested" to "accepted" — generate and
+    // email the rental agreement, and let the guest know it's ready.
+    // Never let a failure here (no email provider configured, a PDF
+    // error) undo the accept the host just successfully made; it's
+    // already committed above.
+    if (body.status === "accepted") {
+      deliverRentalAgreement(supabase, bookingId).catch((error) => console.error("deliverRentalAgreement error:", error));
     }
 
     return NextResponse.json({ booking: data });

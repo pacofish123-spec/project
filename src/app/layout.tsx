@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { PageTransition } from "@/components/page-transition";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { MobileNav } from "@/components/mobile-nav";
+import { SiteFooter } from "@/components/site-footer";
 import { LanguageProvider } from "@/lib/i18n";
 
 // Required so relative OG/Twitter image URLs (per-vehicle, per-destination
@@ -37,5 +38,5 @@ export const viewport: Viewport = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
-  return <html lang="en" className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider><PageViewTracker /><PageTransition>{children}</PageTransition><MobileNav /></LanguageProvider></ThemeProvider></body></html>;
+  return <html lang="en" className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /></LanguageProvider></ThemeProvider></body></html>;
 }
