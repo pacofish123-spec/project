@@ -58,33 +58,43 @@ export default function HostVehiclesPage() {
 
   async function requestVerification(vehicleId: string) {
     setBusyId(vehicleId);
+    setMessage("");
     const response = await fetch(`/api/vehicles/${vehicleId}/verification`, { method: "POST" });
+    const result = await response.json().catch(() => ({})) as { error?: string };
     if (response.ok) load();
+    else setMessage(result.error ?? t("hostCarsGenericError"));
     setBusyId("");
   }
 
   async function publishVehicle(vehicleId: string) {
     setBusyId(vehicleId);
+    setMessage("");
     const response = await fetch(`/api/vehicles/${vehicleId}/publish`, { method: "POST" });
+    const result = await response.json().catch(() => ({})) as { error?: string };
     if (response.ok) load();
+    else setMessage(result.error ?? t("hostCarsGenericError"));
     setBusyId("");
   }
 
   async function archiveVehicle(vehicleId: string) {
     if (!window.confirm(t("archiveVehicleConfirm"))) return;
     setBusyId(vehicleId);
+    setMessage("");
     const response = await fetch(`/api/vehicles/${vehicleId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "archived" }),
     });
+    const result = await response.json().catch(() => ({})) as { error?: string };
     if (response.ok) load();
+    else setMessage(result.error ?? t("hostCarsGenericError"));
     setBusyId("");
   }
 
   async function deleteVehicle(vehicleId: string) {
     if (!window.confirm(t("deleteVehicleConfirm"))) return;
     setBusyId(vehicleId);
+    setMessage("");
     const response = await fetch(`/api/vehicles/${vehicleId}`, { method: "DELETE" });
     const result = await response.json().catch(() => ({})) as { error?: string };
     if (response.ok) { load(); }
