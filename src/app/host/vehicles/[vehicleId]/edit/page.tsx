@@ -9,6 +9,7 @@ import { useLanguage } from "@/lib/i18n";
 import { countries, supportedCurrencies } from "@/lib/marketplace-config";
 import { vehicleMakes, modelsForMake, vehicleYears } from "@/lib/vehicle-catalog";
 import { vehicleAmenities } from "@/lib/vehicle-amenities";
+import { rentalTermOptions } from "@/lib/rental-terms";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
 
@@ -30,6 +31,7 @@ interface Vehicle {
   fuel_policy?: string | null;
   cleaning_policy?: string | null;
   amenities?: string[] | null;
+  rental_terms?: string[] | null;
   photo_paths?: string[] | null;
 }
 
@@ -48,6 +50,7 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
   const [year, setYear] = useState("");
   const [countryCode, setCountryCode] = useState(countries[0].code);
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [rentalTerms, setRentalTerms] = useState<string[]>([]);
   const [photoPaths, setPhotoPaths] = useState<string[]>([]);
 
   useEffect(() => {
@@ -66,6 +69,7 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
         setYear(String(loaded.year));
         setCountryCode(loaded.country_code);
         setAmenities(loaded.amenities ?? []);
+        setRentalTerms(loaded.rental_terms ?? []);
         setPhotoPaths(loaded.photo_paths ?? []);
       }
     }).catch(() => setVehicle(null));
@@ -76,6 +80,10 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
 
   function toggleAmenity(value: string) {
     setAmenities((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
+  }
+
+  function toggleRentalTerm(value: string) {
+    setRentalTerms((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
   }
 
   function chooseMake(nextMake: string) {
@@ -139,6 +147,7 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
         fuelPolicy: values.fuelPolicy,
         cleaningPolicy: values.cleaningPolicy,
         amenities,
+        rentalTerms,
       }),
     });
     const result = await response.json() as { error?: string };
@@ -200,6 +209,18 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
                           <label key={amenity.value}>
                             <input type="checkbox" checked={amenities.includes(amenity.value)} onChange={() => toggleAmenity(amenity.value)} />
                             {t(amenity.labelKey)}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="full">
+                      <span className="select-label">{t("rentalTermsLabel")}</span>
+                      <span className="field-hint">{t("rentalTermsHint")}</span>
+                      <div className="amenity-grid">
+                        {rentalTermOptions.map((term) => (
+                          <label key={term.value}>
+                            <input type="checkbox" checked={rentalTerms.includes(term.value)} onChange={() => toggleRentalTerm(term.value)} />
+                            {t(term.labelKey)}
                           </label>
                         ))}
                       </div>

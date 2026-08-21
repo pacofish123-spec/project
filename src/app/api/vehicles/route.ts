@@ -19,6 +19,7 @@ interface VehicleInput {
   fuelPolicy?: string;
   cleaningPolicy?: string;
   amenities?: string[];
+  rentalTerms?: string[];
   latitude?: number;
   longitude?: number;
 }
@@ -35,6 +36,7 @@ export async function GET(request: Request) {
   const minPrice = searchParams.get("minPrice");
   const maxPrice = searchParams.get("maxPrice");
   const seats = searchParams.get("seats");
+  const rentalTerm = searchParams.get("rentalTerm");
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -67,6 +69,7 @@ export async function GET(request: Request) {
     if (minPrice && Number.isFinite(Number(minPrice))) query = query.gte("daily_price", Number(minPrice));
     if (maxPrice && Number.isFinite(Number(maxPrice))) query = query.lte("daily_price", Number(maxPrice));
     if (seats && Number.isFinite(Number(seats))) query = query.gte("seats", Number(seats));
+    if (rentalTerm) query = query.contains("rental_terms", [rentalTerm]);
     if (excludedVehicleIds.length) query = query.not("id", "in", `(${excludedVehicleIds.join(",")})`);
 
     const { data, error } = await query.order("promoted", { ascending: false }).order("created_at", { ascending: false });
@@ -122,6 +125,7 @@ export async function POST(request: Request) {
       fuel_policy: body.fuelPolicy ?? null,
       cleaning_policy: body.cleaningPolicy ?? null,
       amenities: body.amenities ?? [],
+      rental_terms: body.rentalTerms ?? [],
       latitude: body.latitude ?? null,
       longitude: body.longitude ?? null,
       status: "draft",

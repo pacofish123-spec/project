@@ -37,6 +37,7 @@ interface VehiclePatchInput {
   fuelPolicy?: string;
   cleaningPolicy?: string;
   amenities?: string[];
+  rentalTerms?: string[];
   photoPaths?: string[];
   latitude?: number;
   longitude?: number;
@@ -73,6 +74,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ve
     if (body.fuelPolicy !== undefined) update.fuel_policy = body.fuelPolicy;
     if (body.cleaningPolicy !== undefined) update.cleaning_policy = body.cleaningPolicy;
     if (body.amenities !== undefined) update.amenities = body.amenities;
+    if (body.rentalTerms !== undefined) update.rental_terms = body.rentalTerms;
     if (body.photoPaths !== undefined) update.photo_paths = body.photoPaths;
     if (body.latitude !== undefined) update.latitude = body.latitude;
     if (body.longitude !== undefined) update.longitude = body.longitude;

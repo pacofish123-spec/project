@@ -31,6 +31,8 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
   const { t } = useLanguage();
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [startTime, setStartTime] = useState("10:00");
+  const [endTime, setEndTime] = useState("10:00");
   const [pickupLocation, setPickupLocation] = useState("");
   const [returnLocation, setReturnLocation] = useState("");
   const [message, setMessage] = useState("");
@@ -39,14 +41,17 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [selectedExtras, setSelectedExtras] = useState<Record<string, number>>({});
 
+  const startsAt = startDate ? `${startDate}T${startTime || "00:00"}` : "";
+  const endsAt = endDate ? `${endDate}T${endTime || "00:00"}` : "";
+
   useEffect(() => {
-    if (!startDate || !endDate) { queueMicrotask(() => setQuote(null)); return; }
+    if (!startsAt || !endsAt) { queueMicrotask(() => setQuote(null)); return; }
     queueMicrotask(() => setQuoteLoading(true));
-    fetch(`/api/vehicles/${vehicleId}/quote?startDate=${startDate}&endDate=${endDate}`).then(async (response) => {
+    fetch(`/api/vehicles/${vehicleId}/quote?startDate=${encodeURIComponent(startsAt)}&endDate=${encodeURIComponent(endsAt)}`).then(async (response) => {
       const result = await response.json() as { quote?: Quote };
       setQuote(response.ok ? result.quote ?? null : null);
     }).catch(() => setQuote(null)).finally(() => setQuoteLoading(false));
-  }, [vehicleId, startDate, endDate]);
+  }, [vehicleId, startsAt, endsAt]);
 
   if (status !== "published") {
     return <p className="workflow-error">{t("vehicleNotAvailable")}</p>;
@@ -86,7 +91,7 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
     const response = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ vehicleId, startsAt: startDate, endsAt: endDate, pickupLocation, returnLocation }),
+      body: JSON.stringify({ vehicleId, startsAt, endsAt, pickupLocation, returnLocation }),
     });
     const result = await response.json() as { error?: string; booking?: { id: string } };
     if (!response.ok || !result.booking) { setBusy(false); setMessage(result.error ?? t("bookingGenericError")); return; }
@@ -108,6 +113,11 @@ export function BookingForm({ vehicleId, status, extras }: { vehicleId: string; 
   return (
     <form className="workflow-form booking-form" onSubmit={handleSubmit}>
       <CalendarPicker startDate={startDate} endDate={endDate} onChange={(nextStart, nextEnd) => { setStartDate(nextStart); setEndDate(nextEnd); setMessage(""); }} />
+      <div className="field-grid">
+        <label>{t("bookingPickupTimeLabel")}<input type="time" value={startTime} onChange={(event) => setStartTime(event.target.value)} required /></label>
+        <label>{t("bookingReturnTimeLabel")}<input type="time" value={endTime} onChange={(event) => setEndTime(event.target.value)} required /></label>
+      </div>
+      <p className="field-hint" style={{ margin: "-9px 0 4px" }}>{t("bookingTimeHint")}</p>
       <div className="field-grid">
         <label>{t("bookingPickupLabel")}<input value={pickupLocation} onChange={(event) => setPickupLocation(event.target.value)} placeholder={t("bookingPickupPlaceholder")} required /></label>
         <label>{t("bookingReturnLabel")}<input value={returnLocation} onChange={(event) => setReturnLocation(event.target.value)} placeholder={t("bookingReturnPlaceholder")} required /></label>

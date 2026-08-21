@@ -49,6 +49,47 @@ html.dark .vehicle-detail-media { background: repeating-linear-gradient(135deg, 
 .vehicle-detail-trust svg { color: var(--coral); }
 .cancellation-policy { margin-bottom: 20px; }
 .booking-form { margin-top: 10px; }
+.vehicle-detail-left { display: flex; flex-direction: column; gap: 16px; }
+.vehicle-detail-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; }
+.vehicle-detail-thumbs button { display: block; aspect-ratio: 1; overflow: hidden; padding: 0; border: 1px solid #d4dfd6; border-radius: 6px; background: none; }
+.vehicle-detail-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.vehicle-feature-icons { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; border: 1px solid #d4dfd6; border-radius: 8px; background: var(--paper); }
+.vehicle-feature-icons span { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 62px; color: #647069; font-size: 10px; text-align: center; line-height: 1.3; }
+.vehicle-feature-icons svg { color: var(--coral); }
+.vehicle-included-card, .vehicle-specs-card, .vehicle-description-card { padding: 16px; border: 1px solid #d4dfd6; border-radius: 8px; background: var(--paper); }
+.vehicle-specs-list { margin: 8px 0 0; padding-left: 18px; color: #4d5952; font-size: 13px; line-height: 1.85; }
+html.dark .vehicle-detail-thumbs button, html.dark .vehicle-feature-icons, html.dark .vehicle-included-card, html.dark .vehicle-specs-card, html.dark .vehicle-description-card { border-color: #385047; }
+html.dark .vehicle-feature-icons span { color: #a9b7ad; }
+html.dark .vehicle-specs-list { color: #b8c6bc; }
+
+.host-profile-chip { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 20px; padding: 10px 14px; border: 1px solid #d4dfd6; border-radius: 8px; background: var(--paper); text-align: left; }
+.host-avatar { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; overflow: hidden; border-radius: 50%; background: #eaf2eb; color: var(--pine); }
+.host-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.host-avatar.large { width: 56px; height: 56px; }
+.host-chip-text { display: grid; gap: 3px; }
+.host-chip-text strong { color: var(--ink); font-size: 14px; font-weight: 700; }
+.host-chip-meta { display: flex; align-items: center; gap: 4px; color: #78847d; font-size: 12px; }
+.host-chip-meta svg { color: var(--coral); }
+.host-popover-overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 20px; background: rgba(6,16,13,.55); }
+.host-popover-card { position: relative; width: min(420px, 100%); max-height: 84vh; overflow-y: auto; padding: 28px 22px 22px; border-radius: 12px; background: var(--paper); color: var(--ink); box-shadow: 0 30px 80px rgba(0,0,0,.35); }
+.host-popover-close { position: absolute; top: 14px; right: 14px; }
+.host-popover-head { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.host-popover-head strong { display: block; font: 400 21px Georgia, "Noto Serif", "Times New Roman", serif; color: var(--ink); }
+.host-popover-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px 0; border-top: 1px solid #e4e8e1; border-bottom: 1px solid #e4e8e1; }
+.host-popover-stats div { display: grid; justify-items: center; gap: 2px; text-align: center; }
+.host-popover-stats strong { font-size: 18px; color: var(--ink); }
+.host-popover-stats span { color: #78847d; font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.host-review-list { display: grid; gap: 12px; margin-top: 10px; }
+.host-review-item { padding: 12px; border: 1px solid #e4e8e1; border-radius: 8px; }
+.host-review-item > div:first-child { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.host-review-item strong { font-size: 13px; color: var(--ink); }
+.host-review-item .rating { display: flex; align-items: center; gap: 3px; color: var(--pine); font-size: 12px; }
+.host-review-item p { margin: 4px 0; color: #4d5952; font-size: 13px; line-height: 1.5; }
+html.dark .host-profile-chip { border-color: #385047; }
+html.dark .host-avatar { background: #22322b; }
+html.dark .host-popover-stats { border-color: #385047; }
+html.dark .host-review-item { border-color: #385047; }
+html.dark .host-review-item p { color: #b8c6bc; }
 .booking-total { display: flex; align-items: center; gap: 8px; margin: 4px 0; color: var(--ink); font-size: 13px; font-weight: 700; }
 .booking-total svg { color: var(--coral); }
 .extras-picker { display: grid; gap: 10px; padding: 16px; border: 1px solid #d4dfd6; border-radius: 6px; }

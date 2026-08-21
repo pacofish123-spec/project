@@ -13,7 +13,8 @@ import { NotificationBell } from "@/components/notification-bell";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrencyRates } from "@/lib/use-currency-rates";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { slugifyDestination } from "@/lib/destinations";
+import { drDestinations, slugifyDestination } from "@/lib/destinations";
+import { rentalTermOptions } from "@/lib/rental-terms";
 import {
   ArrowRight,
   CarFront,
@@ -34,10 +35,11 @@ import {
 // engines and the first paint get real listing content instead of an
 // empty grid waiting on a client fetch. Everything else here (menu,
 // filters, auth state, language) is genuinely client-only interaction.
-export function HomeClient({ initialVehicles }: { initialVehicles: VehicleCardData[] }) {
+export function HomeClient({ initialVehicles, activeCities }: { initialVehicles: VehicleCardData[]; activeCities: string[] }) {
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hostFilter, setHostFilter] = useState("All vehicles");
+  const [termFilter, setTermFilter] = useState("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [vehicles] = useState<VehicleCardData[]>(initialVehicles);
   // undefined = still checking, false = signed out, true = signed in
@@ -53,16 +55,32 @@ export function HomeClient({ initialVehicles }: { initialVehicles: VehicleCardDa
   }, []);
 
   const filteredVehicles = vehicles.filter((vehicle) =>
-    hostFilter === "All vehicles" ||
-    (hostFilter === "Personal owners" && vehicle.host_type === "individual") ||
-    (hostFilter === "Businesses" && vehicle.host_type === "business"),
+    (hostFilter === "All vehicles" ||
+      (hostFilter === "Personal owners" && vehicle.host_type === "individual") ||
+      (hostFilter === "Businesses" && vehicle.host_type === "business"))
+    && (termFilter === "all" || (vehicle.rental_terms ?? []).includes(termFilter)),
   );
 
-  const destinations = [
+  const normalizedActiveCities = new Set(activeCities.map((city) => city.trim().toLowerCase()));
+  const curatedDestinations = [
     { name: "Punta Cana", detail: t("destPuntaCanaDetail"), image: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=900&q=80" },
     { name: "Santo Domingo", detail: t("destSantoDomingoDetail"), image: "https://images.unsplash.com/photo-1533104816931-20fa691ff6ca?auto=format&fit=crop&w=900&q=80" },
     { name: "Samaná", detail: t("destSamanaDetail"), image: "https://images.unsplash.com/photo-1510414842594-a61c69b5ae57?auto=format&fit=crop&w=900&q=80" },
   ];
+  // Only show a destination once a host has actually published
+  // something there — an empty-handed "explore Punta Cana" card is a
+  // dead end. Backfill from the full city list so this section still
+  // shows up to 3 real destinations even if none of the 3 curated ones
+  // have a car live yet.
+  const destinations = curatedDestinations.filter((destination) => normalizedActiveCities.has(destination.name.trim().toLowerCase()));
+  if (destinations.length < 3) {
+    for (const candidate of drDestinations) {
+      if (destinations.length >= 3) break;
+      if (destinations.some((destination) => destination.name === candidate.name)) continue;
+      if (!normalizedActiveCities.has(candidate.name.trim().toLowerCase())) continue;
+      destinations.push({ name: candidate.name, detail: t("destinationGenericDetail"), image: candidate.photo });
+    }
+  }
 
   return (
     <main>
@@ -93,6 +111,10 @@ export function HomeClient({ initialVehicles }: { initialVehicles: VehicleCardDa
 
       <section className="section page-width" id="cars">
         <div className="section-heading"><div><p className="eyebrow muted">{t("readyWhenYouAre")}</p><h2>{t("carsHeadingLine1")} <em>{t("carsHeadingLine2")}</em></h2></div><a className="text-link" href="/search">{t("viewAllCars")} <ArrowRight size={16} /></a></div>
+        <div className="filter-tabs rental-term-tabs">
+          <button className={termFilter === "all" ? "active" : ""} onClick={() => setTermFilter("all")}>{t("filterRentalTermAll")}</button>
+          {rentalTermOptions.map((term) => <button key={term.value} className={termFilter === term.value ? "active" : ""} onClick={() => setTermFilter(term.value)}>{t(term.labelKey)}</button>)}
+        </div>
         <div className="filter-row"><div className="filter-tabs">{["All vehicles", "Personal owners", "Businesses"].map((filter) => <button key={filter} className={hostFilter === filter ? "active" : ""} onClick={() => setHostFilter(filter)}>{filter === "All vehicles" ? t("filterAll") : filter === "Personal owners" ? t("filterPersonal") : t("filterBusiness")}</button>)}</div><button className="filter-button" onClick={() => setFiltersOpen(!filtersOpen)}><SlidersHorizontal size={16} /> {t("filters")}</button></div>
         <p className="filter-hint">{hostFilter === "Personal owners" ? t("filterExplainerPersonal") : hostFilter === "Businesses" ? t("filterExplainerBusiness") : t("filterExplainerAll")}</p>
         {filtersOpen && <div className="filter-panel"><span>{t("moreFilters")}</span><button onClick={() => setFiltersOpen(false)}>{t("filterAutomatic")}</button><button onClick={() => setFiltersOpen(false)}>{t("filterSeats")}</button><button onClick={() => setFiltersOpen(false)}>{t("filterAc")}</button></div>}
@@ -102,7 +124,7 @@ export function HomeClient({ initialVehicles }: { initialVehicles: VehicleCardDa
 
       <section className="trust-strip" id="trust"><div className="page-width trust-grid"><div><ShieldCheck size={25} /><h3>{t("trustBuiltInTitle")}</h3><p>{t("trustBuiltInBody")}</p></div><div><Sparkles size={25} /><h3>{t("madeForJourneyTitle")}</h3><p>{t("madeForJourneyBody")}</p></div><div><Globe2 size={25} /><h3>{t("oneAccountTitle")}</h3><p>{t("oneAccountBody")}</p></div></div></section>
 
-      <section className="section page-width" id="destinations"><div className="section-heading"><div><p className="eyebrow muted">{t("startSomewhereBeautiful")}</p><h2>{t("whereWillYouGoLine1")} <em>{t("whereWillYouGoLine2")}</em></h2></div><Link className="text-link" href="/destinations">{t("exploreDestinations")} <ArrowRight size={16} /></Link></div><div className="destination-grid">{destinations.map((destination) => <Link className="destination-card" href={`/destinations/${slugifyDestination(destination.name)}`} key={destination.name} style={{ backgroundImage: `url(${destination.image})` }}><div><strong>{destination.name}</strong><span>{destination.detail}</span></div><ArrowRight size={18} /></Link>)}</div></section>
+      {destinations.length > 0 && <section className="section page-width" id="destinations"><div className="section-heading"><div><p className="eyebrow muted">{t("startSomewhereBeautiful")}</p><h2>{t("whereWillYouGoLine1")} <em>{t("whereWillYouGoLine2")}</em></h2></div><Link className="text-link" href="/destinations">{t("exploreDestinations")} <ArrowRight size={16} /></Link></div><div className="destination-grid">{destinations.map((destination) => <Link className="destination-card" href={`/destinations/${slugifyDestination(destination.name)}`} key={destination.name} style={{ backgroundImage: `url(${destination.image})` }}><div><strong>{destination.name}</strong><span>{destination.detail}</span></div><ArrowRight size={18} /></Link>)}</div></section>}
 
       <section className="host-cta page-width" id="host"><div><p className="eyebrow">{t("forOwnersBusinesses")}</p><h2>{t("rentCarLine1")}<br /><em>{t("rentCarLine2")}</em></h2><p>{t("hostCtaBody")}</p><a className="button-light" href="/host">{t("becomeAHost")} <ArrowRight size={16} /></a></div><div className="host-stat"><span>01</span><strong>{t("hostStat1Line1")}<br />{t("hostStat1Line2")}</strong><span>02</span><strong>{t("hostStat2Line1")}<br />{t("hostStat2Line2")}</strong></div></section>
 

@@ -2,6 +2,7 @@ import { HomeClient } from "@/components/home-client";
 import type { VehicleCardData } from "@/components/vehicle-card";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { attachVerifiedFlag } from "@/lib/vehicle-verification";
+import { getActiveDestinationCities } from "@/lib/active-cities";
 
 // Featured vehicles are fetched server-side so the homepage's initial
 // HTML has real listing content for search engines and link-preview
@@ -24,6 +25,10 @@ async function loadFeaturedVehicles(): Promise<VehicleCardData[]> {
 }
 
 export default async function Home() {
-  const vehicles = await loadFeaturedVehicles();
-  return <HomeClient initialVehicles={vehicles} />;
+  const supabase = await createSupabaseServerClient();
+  const [vehicles, activeCities] = await Promise.all([
+    loadFeaturedVehicles(),
+    getActiveDestinationCities(supabase),
+  ]);
+  return <HomeClient initialVehicles={vehicles} activeCities={[...activeCities]} />;
 }

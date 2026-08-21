@@ -10,6 +10,7 @@ import { useLanguage } from "@/lib/i18n";
 import { countries, supportedCurrencies } from "@/lib/marketplace-config";
 import { vehicleMakes, modelsForMake, vehicleYears } from "@/lib/vehicle-catalog";
 import { vehicleAmenities } from "@/lib/vehicle-amenities";
+import { rentalTermOptions } from "@/lib/rental-terms";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
 const MAX_PHOTO_BYTES = 50 * 1024 * 1024;
@@ -133,9 +134,14 @@ function NewVehicleForm() {
   const years = vehicleYears();
   const [year, setYear] = useState(String(years[1] ?? years[0]));
   const [amenities, setAmenities] = useState<string[]>([]);
+  const [rentalTerms, setRentalTerms] = useState<string[]>(["daily"]);
 
   function toggleAmenity(value: string) {
     setAmenities((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
+  }
+
+  function toggleRentalTerm(value: string) {
+    setRentalTerms((current) => (current.includes(value) ? current.filter((item) => item !== value) : [...current, value]));
   }
 
   function chooseMake(nextMake: string) {
@@ -187,6 +193,7 @@ function NewVehicleForm() {
         fuelPolicy: values.fuelPolicy,
         cleaningPolicy: values.cleaningPolicy || undefined,
         amenities,
+        rentalTerms,
         latitude: coords?.latitude,
         longitude: coords?.longitude,
       }),
@@ -256,6 +263,18 @@ function NewVehicleForm() {
                     <label key={amenity.value}>
                       <input type="checkbox" checked={amenities.includes(amenity.value)} onChange={() => toggleAmenity(amenity.value)} />
                       {t(amenity.labelKey)}
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="full">
+                <span className="select-label">{t("rentalTermsLabel")}</span>
+                <span className="field-hint">{t("rentalTermsHint")}</span>
+                <div className="amenity-grid">
+                  {rentalTermOptions.map((term) => (
+                    <label key={term.value}>
+                      <input type="checkbox" checked={rentalTerms.includes(term.value)} onChange={() => toggleRentalTerm(term.value)} />
+                      {t(term.labelKey)}
                     </label>
                   ))}
                 </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { AppHeader } from "@/components/app-header";
-import { VehicleDetailClient, type Vehicle } from "@/components/vehicle-detail-client";
+import { VehicleDetailClient, type Vehicle, type HostSummary } from "@/components/vehicle-detail-client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
 
@@ -25,6 +25,16 @@ async function loadVehicle(vehicleId: string): Promise<Vehicle | null> {
   return { ...data, verified: Boolean(verificationRecord) } as Vehicle;
 }
 
+async function loadHostSummary(ownerUserId: string): Promise<HostSummary | null> {
+  const supabase = await createSupabaseServerClient();
+  const [{ data: profile }, { data: stats }] = await Promise.all([
+    supabase.from("public_profiles").select("id, display_name, avatar_url, member_since").eq("id", ownerUserId).maybeSingle(),
+    supabase.from("public_host_profiles").select("rating, completed_rentals, response_rate").eq("user_id", ownerUserId).maybeSingle(),
+  ]);
+  if (!profile) return null;
+  return { ...profile, rating: stats?.rating ?? null, completed_rentals: stats?.completed_rentals ?? 0, response_rate: stats?.response_rate ?? null };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { vehicleId } = await params;
   const vehicle = await loadVehicle(vehicleId);
@@ -46,11 +56,12 @@ export default async function VehicleDetailPage({ params }: PageProps) {
   const { vehicleId } = await params;
   const vehicle = await loadVehicle(vehicleId);
   if (!vehicle) notFound();
+  const host = await loadHostSummary((vehicle as unknown as { owner_user_id: string }).owner_user_id);
 
   return (
     <>
       <AppHeader />
-      <VehicleDetailClient vehicleId={vehicleId} initialVehicle={vehicle} />
+      <VehicleDetailClient vehicleId={vehicleId} initialVehicle={vehicle} host={host} />
     </>
   );
 }

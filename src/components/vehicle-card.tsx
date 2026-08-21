@@ -23,6 +23,7 @@ export interface VehicleCardData {
   verified?: boolean;
   photo_paths?: string[] | null;
   amenities?: string[] | null;
+  rental_terms?: string[] | null;
   distance_km?: number | null;
 }
 
