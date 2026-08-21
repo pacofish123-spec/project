@@ -109,19 +109,27 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       await supabase.storage.from("vehicle-photos").remove(existing.photo_paths);
     }
 
-    const { data, error } = await supabase.from("vehicles").delete().eq("id", vehicleId).select("id").maybeSingle();
+    // Goes through the delete_vehicle RPC rather than a raw table
+    // delete — it also clears this vehicle's own verification_records
+    // first (an internal review artifact, safe to clear on an
+    // authorized delete), which the RLS-bound client has no policy to
+    // do directly. Bookings/reviews are untouched, so real trip
+    // history still correctly blocks deletion below.
+    const { error } = await supabase.rpc("delete_vehicle", { target_vehicle_id: vehicleId });
 
     if (error) {
-      // Every booking/extras/verification FK to vehicles is ON DELETE
-      // RESTRICT (by design — deleting a car shouldn't silently erase
-      // someone's trip history). A listing with any real history can't
-      // be hard-deleted; archiving (status change) is the equivalent.
+      const reason = error.message ?? "";
+      if (reason.includes("VEHICLE_ACCESS_DENIED")) return NextResponse.json({ error: "You are not authorized to manage this vehicle." }, { status: 403 });
+      if (reason.includes("VEHICLE_NOT_FOUND")) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
+      // Every booking/review FK to vehicles is ON DELETE RESTRICT (by
+      // design — deleting a car shouldn't silently erase someone's
+      // trip history). A listing with real history can't be
+      // hard-deleted; archiving (status change) is the equivalent.
       if (error.code === "23503") {
-        return NextResponse.json({ error: "This vehicle has booking or verification history and can't be deleted. Archive it instead to hide it from search." }, { status: 409 });
+        return NextResponse.json({ error: "This vehicle has real booking or review history and can't be deleted. Archive it instead to hide it from search." }, { status: 409 });
       }
       return NextResponse.json({ error: "Unable to delete this vehicle." }, { status: 500 });
     }
-    if (!data) return NextResponse.json({ error: "You are not authorized to manage this vehicle." }, { status: 403 });
 
     return NextResponse.json({ ok: true });
   } catch (error) {

@@ -47,7 +47,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     if (error) {
       const reason = error.message ?? "";
       if (reason.includes("VEHICLE_NOT_FOUND")) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
-      if (error.code === "23503") return NextResponse.json({ error: "This vehicle has booking or verification history and can't be deleted." }, { status: 409 });
+      if (error.code === "23503") return NextResponse.json({ error: "This vehicle has real booking or review history and can't be deleted." }, { status: 409 });
       return NextResponse.json({ error: "Unable to delete this vehicle." }, { status: 500 });
     }
 
