@@ -13,7 +13,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ veh
   const { vehicleId } = await params;
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
-    .from("public_booking_availability")
+    .rpc("public_booking_availability")
     .select("starts_at, ends_at")
     .eq("vehicle_id", vehicleId);
 
@@ -26,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ veh
   // create_booking enforces, but that's the right trade for a calendar
   // a human is scanning by eye.
   const bookedDates = new Set<string>();
-  for (const booking of data ?? []) {
+  for (const booking of (data ?? []) as Array<{ starts_at: string; ends_at: string }>) {
     const cursor = new Date(booking.starts_at);
     const end = new Date(booking.ends_at);
     cursor.setHours(0, 0, 0, 0);
