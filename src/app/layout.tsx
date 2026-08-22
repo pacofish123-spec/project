@@ -11,6 +11,7 @@ import { MessagingWidget } from "@/components/messaging-widget";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { LanguageProvider } from "@/lib/i18n";
 import { detectLanguageFromAcceptHeader } from "@/lib/detect-language";
+import { Analytics } from "@vercel/analytics/next";
 
 // Required so relative OG/Twitter image URLs (per-vehicle, per-destination
 // pages below) resolve to absolute ones — link-preview bots (WhatsApp,
@@ -52,5 +53,5 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const acceptLanguage = (await headers()).get("accept-language");
   const initialLanguage = detectLanguageFromAcceptHeader(acceptLanguage);
 
-  return <html lang={initialLanguage} className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider initialLanguage={initialLanguage}><ServiceWorkerRegister /><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /><MessagingWidget /></LanguageProvider></ThemeProvider></body></html>;
+  return <html lang={initialLanguage} className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider initialLanguage={initialLanguage}><ServiceWorkerRegister /><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /><MessagingWidget /></LanguageProvider></ThemeProvider><Analytics /></body></html>;
 }
