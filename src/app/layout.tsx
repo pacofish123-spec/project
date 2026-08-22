@@ -22,7 +22,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "yoRento | Your next journey starts here",
   description: "A trusted vehicle marketplace born in the Dominican Republic.",
-  icons: { icon: "/yorento-mark.svg", shortcut: "/yorento-mark.svg", apple: "/yorento-mark.svg" },
+  // apple-touch-icon specifically wants a raster image — iOS Safari's
+  // SVG support there is unreliable, unlike the favicon/manifest icons.
+  icons: { icon: "/yorento-mark.svg", shortcut: "/yorento-mark.svg", apple: "/icons/icon-192.png" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "yoRento" },
   formatDetection: { telephone: false },
   other: { "mobile-web-app-capable": "yes" },

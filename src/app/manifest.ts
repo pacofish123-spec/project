@@ -12,6 +12,14 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#183b32",
     icons: [
       { src: "/yorento-mark.svg", sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+      { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+      // Maskable: Android's adaptive-icon shapes (circle, squircle, ...)
+      // crop anything outside a centered safe zone — these have the
+      // mark scaled down onto a full-bleed brand-green background so
+      // it survives every mask shape instead of getting clipped.
+      { src: "/icons/icon-maskable-192.png", sizes: "192x192", type: "image/png", purpose: "maskable" },
+      { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
     ],
   };
 }
