@@ -201,7 +201,7 @@ html.dark .photo-upload-dropzone { border-color: #385047; background: #1b2823; }
 html.dark .photo-upload-dropzone:hover { background: #2a201a; }
 html.dark .condition-photo-grid a, html.dark .condition-photo-grid button { border-color: #385047; }
 
-.message-thread { display: grid; gap: 10px; max-height: 50vh; overflow-y: auto; padding: 6px 2px 16px; }
+.message-thread { display: grid; align-content: end; gap: 10px; max-height: 50vh; overflow-y: auto; padding: 6px 2px 16px; }
 .message-bubble { display: grid; gap: 3px; justify-self: start; max-width: 78%; padding: 10px 13px; border-radius: 12px 12px 12px 3px; background: var(--surface, #eef1ec); background: #eef1ec; }
 .message-bubble.self { justify-self: end; border-radius: 12px 12px 3px 12px; background: var(--pine); color: #fff; }
 .message-bubble p { margin: 0; font-size: 13px; line-height: 1.5; }
