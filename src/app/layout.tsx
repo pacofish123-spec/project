@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/page-transition";
 import { PageViewTracker } from "@/components/page-view-tracker";
 import { MobileNav } from "@/components/mobile-nav";
 import { SiteFooter } from "@/components/site-footer";
+import { MessagingWidget } from "@/components/messaging-widget";
 import { LanguageProvider } from "@/lib/i18n";
 import { detectLanguageFromAcceptHeader } from "@/lib/detect-language";
 
@@ -48,5 +49,5 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const acceptLanguage = (await headers()).get("accept-language");
   const initialLanguage = detectLanguageFromAcceptHeader(acceptLanguage);
 
-  return <html lang={initialLanguage} className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider initialLanguage={initialLanguage}><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /></LanguageProvider></ThemeProvider></body></html>;
+  return <html lang={initialLanguage} className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider initialLanguage={initialLanguage}><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /><MessagingWidget /></LanguageProvider></ThemeProvider></body></html>;
 }
