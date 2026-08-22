@@ -61,6 +61,6 @@ export async function GET() {
   } catch (error) {
     const message = error instanceof Error ? error.message : "REQUEST_FAILED";
     const status = message === "AUTHENTICATION_REQUIRED" ? 401 : message === "CAPABILITY_REQUIRED" ? 403 : 500;
-    return NextResponse.json({ error: status === 403 ? "Admin access required." : "Unable to load overview." }, { status });
+    return NextResponse.json({ error: status === 401 ? "Sign in is required." : status === 403 ? "Admin access required." : "Unable to load overview." }, { status });
   }
 }
