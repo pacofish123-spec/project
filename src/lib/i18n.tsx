@@ -19,27 +19,21 @@ export const localeByLanguage: Record<SupportedLanguage, string> = {
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 const STORAGE_KEY = "yorento-language";
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguageState] = useState<SupportedLanguage>("en");
+// initialLanguage comes from the root layout's server-side
+// Accept-Language detection (see detect-language.ts) — the first HTML
+// already matches the visitor's language instead of always shipping
+// English and switching after hydration. Defaults to "en" so this
+// still works wherever it's mounted without that prop.
+export function LanguageProvider({ children, initialLanguage = "en" }: { children: ReactNode; initialLanguage?: SupportedLanguage }) {
+  const [language, setLanguageState] = useState<SupportedLanguage>(initialLanguage);
 
   useEffect(() => {
+    // An explicit pick from the language switcher always wins and
+    // sticks; otherwise the server-detected initialLanguage above is
+    // already correct, so there's nothing further to do here.
     const stored = window.localStorage.getItem(STORAGE_KEY);
     if (stored && (supportedLanguages as readonly string[]).includes(stored)) {
       queueMicrotask(() => setLanguageState(stored as SupportedLanguage));
-      return;
-    }
-    // No explicit choice saved yet — infer from the browser's language
-    // list (most-preferred first) rather than always opening in English.
-    // Deliberately not persisted to storage: an explicit pick from the
-    // language switcher always wins and sticks, but an unvisited browser
-    // should keep re-detecting on every visit until the person actually
-    // chooses one.
-    const browserLanguages = window.navigator.languages ?? [window.navigator.language];
-    const detected = browserLanguages
-      .map((lang) => lang.slice(0, 2).toLowerCase())
-      .find((lang) => (supportedLanguages as readonly string[]).includes(lang)) as SupportedLanguage | undefined;
-    if (detected && detected !== "en") {
-      queueMicrotask(() => setLanguageState(detected));
     }
   }, []);
 

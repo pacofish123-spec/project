@@ -107,11 +107,11 @@ const en = {
 
   faqTitle: "Frequently asked questions",
   faqQ1: "How does yoRento work?",
-  faqA1: "Search available vehicles by city and dates, then send a booking request. The owner or business reviews it and accepts or declines — you're notified either way. Once accepted, you coordinate pickup directly with your host through in-app messaging, complete a quick photo condition check at pickup and again at return, and you're on your way.",
+  faqA1: "Search available vehicles by city and dates, then send a booking request. The owner or business reviews it and accepts or declines — you're notified either way. Once accepted, pay securely in the app — we accept credit and debit cards via Stripe, PayPal, and Apple Pay — then coordinate pickup details with your host through in-app messaging, complete a quick photo condition check at pickup and again at return, and you're on your way.",
   faqQ2: "What does insurance cover?",
   faqA2: "yoRento doesn't underwrite its own insurance policy. Hosts and rental businesses are responsible for carrying whatever insurance and legal coverage applies to their vehicle. Ask your host directly what's included before you book, and keep that conversation in the app's messaging so there's a record of what was agreed.",
   faqQ3: "What happens if the owner cancels?",
-  faqA3: "You're notified right away and the vehicle becomes available for other renters, so you can rebook quickly. yoRento doesn't charge a cancellation fee. If you'd already arranged payment or a deposit directly with your host, work out the refund with them — again, keep it in the app's messaging so there's a paper trail.",
+  faqA3: "You're notified right away and the vehicle becomes available for other renters, so you can rebook quickly. yoRento doesn't charge a cancellation fee. If you'd already paid, you'll be refunded according to the cancellation policy shown at booking — reach out through your trip's messaging or file a dispute from your trip and our team will process it.",
   faqQ4: "Do I need a Dominican driver's license?",
   faqA4: "Most visitors can drive in the Dominican Republic on a valid license from their home country for the length of a typical tourist stay; some hosts may also ask for an International Driving Permit. Requirements can vary by nationality and length of stay, so confirm specifics with your host when you book and check current entry requirements before you travel.",
 
@@ -665,11 +665,11 @@ const es: Record<keyof typeof en, string> = {
 
   faqTitle: "Preguntas frecuentes",
   faqQ1: "¿Cómo funciona yoRento?",
-  faqA1: "Busca vehículos disponibles por ciudad y fechas, luego envía una solicitud de reserva. El propietario o la empresa la revisa y la acepta o rechaza — te avisamos de cualquier forma. Una vez aceptada, coordinas la recogida directamente con tu anfitrión mediante mensajes dentro de la app, hacen juntos una breve revisión del estado del auto con fotos al recogerlo y otra vez al devolverlo, y listo.",
+  faqA1: "Busca vehículos disponibles por ciudad y fechas, luego envía una solicitud de reserva. El propietario o la empresa la revisa y la acepta o rechaza — te avisamos de cualquier forma. Una vez aceptada, paga de forma segura dentro de la app — aceptamos tarjetas de crédito y débito vía Stripe, PayPal y Apple Pay — luego coordina los detalles de recogida con tu anfitrión mediante mensajes dentro de la app, hacen juntos una breve revisión del estado del auto con fotos al recogerlo y otra vez al devolverlo, y listo.",
   faqQ2: "¿Qué cubre el seguro?",
   faqA2: "yoRento no emite su propia póliza de seguro. Los propietarios y las empresas de alquiler son responsables de tener el seguro y la cobertura legal que corresponda a su vehículo. Pregúntale directamente a tu anfitrión qué incluye antes de reservar, y mantén esa conversación dentro de la mensajería de la app para que quede un registro de lo acordado.",
   faqQ3: "¿Qué pasa si el propietario cancela?",
-  faqA3: "Te avisamos de inmediato y el vehículo queda disponible para otros usuarios, así puedes reservar otro rápidamente. yoRento no cobra ninguna comisión por cancelación. Si ya habías arreglado un pago o depósito directamente con tu anfitrión, resuelve el reembolso con él — de nuevo, mantén esa conversación dentro de la app para que quede constancia.",
+  faqA3: "Te avisamos de inmediato y el vehículo queda disponible para otros usuarios, así puedes reservar otro rápidamente. yoRento no cobra ninguna comisión por cancelación. Si ya habías pagado, se te reembolsará según la política de cancelación mostrada al reservar — comunícate a través de la mensajería de tu viaje o presenta una disputa desde tu viaje y nuestro equipo lo procesará.",
   faqQ4: "¿Necesito licencia de conducir dominicana?",
   faqA4: "La mayoría de los visitantes pueden conducir en la República Dominicana con una licencia válida de su país de origen durante una estadía turística típica; algunos anfitriones también pueden pedir un Permiso Internacional de Conducir. Los requisitos pueden variar según tu nacionalidad y la duración de tu estadía, así que confirma los detalles con tu anfitrión al reservar y revisa los requisitos de entrada vigentes antes de viajar.",
 
@@ -1223,11 +1223,11 @@ const fr: Record<keyof typeof en, string> = {
 
   faqTitle: "Questions fréquentes",
   faqQ1: "Comment fonctionne yoRento ?",
-  faqA1: "Recherchez les véhicules disponibles par ville et par dates, puis envoyez une demande de réservation. Le propriétaire ou l'entreprise l'examine et l'accepte ou la refuse — vous êtes prévenu dans les deux cas. Une fois acceptée, vous organisez la prise en charge directement avec votre hôte via la messagerie intégrée, faites ensemble un état des lieux rapide avec photos à la prise en charge puis au retour, et c'est parti.",
+  faqA1: "Recherchez les véhicules disponibles par ville et par dates, puis envoyez une demande de réservation. Le propriétaire ou l'entreprise l'examine et l'accepte ou la refuse — vous êtes prévenu dans les deux cas. Une fois acceptée, payez en toute sécurité dans l'application — nous acceptons les cartes de crédit et de débit via Stripe, PayPal et Apple Pay — puis organisez la prise en charge avec votre hôte via la messagerie intégrée, faites ensemble un état des lieux rapide avec photos à la prise en charge puis au retour, et c'est parti.",
   faqQ2: "Que couvre l'assurance ?",
   faqA2: "yoRento ne souscrit pas sa propre police d'assurance. Les propriétaires et les entreprises de location sont responsables de l'assurance et de la couverture légale applicables à leur véhicule. Demandez directement à votre hôte ce qui est inclus avant de réserver, et gardez cet échange dans la messagerie de l'application pour qu'il en reste une trace.",
   faqQ3: "Que se passe-t-il si le propriétaire annule ?",
-  faqA3: "Vous êtes prévenu immédiatement et le véhicule redevient disponible pour d'autres locataires, afin que vous puissiez réserver ailleurs rapidement. yoRento ne facture aucuns frais d'annulation. Si vous aviez déjà convenu d'un paiement ou d'un dépôt directement avec votre hôte, réglez le remboursement avec lui — là encore, gardez cet échange dans la messagerie de l'application.",
+  faqA3: "Vous êtes prévenu immédiatement et le véhicule redevient disponible pour d'autres locataires, afin que vous puissiez réserver ailleurs rapidement. yoRento ne facture aucuns frais d'annulation. Si vous aviez déjà payé, vous serez remboursé selon la politique d'annulation affichée lors de la réservation — contactez-nous via la messagerie de votre voyage ou déposez un litige depuis votre voyage, et notre équipe le traitera.",
   faqQ4: "Ai-je besoin d'un permis de conduire dominicain ?",
   faqA4: "La plupart des visiteurs peuvent conduire en République dominicaine avec un permis valide de leur pays d'origine pendant la durée d'un séjour touristique classique ; certains hôtes peuvent aussi demander un permis de conduire international. Les exigences peuvent varier selon votre nationalité et la durée de votre séjour, alors confirmez les détails avec votre hôte au moment de la réservation et vérifiez les conditions d'entrée en vigueur avant de partir.",
 

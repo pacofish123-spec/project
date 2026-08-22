@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { headers } from "next/headers";
 import "./globals.css";
 import "./workflows.css";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -7,6 +8,7 @@ import { PageViewTracker } from "@/components/page-view-tracker";
 import { MobileNav } from "@/components/mobile-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { LanguageProvider } from "@/lib/i18n";
+import { detectLanguageFromAcceptHeader } from "@/lib/detect-language";
 
 // Required so relative OG/Twitter image URLs (per-vehicle, per-destination
 // pages below) resolve to absolute ones — link-preview bots (WhatsApp,
@@ -37,6 +39,14 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
-  return <html lang="en" className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /></LanguageProvider></ThemeProvider></body></html>;
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  // Detected here (not just client-side) so the very first HTML — what
+  // a crawler sees, and what paints before hydration — already matches
+  // the visitor's language instead of always shipping English. DR is
+  // the primary market; Accept-Language sends Spanish speakers to
+  // Spanish and everyone else (tourists included) to English.
+  const acceptLanguage = (await headers()).get("accept-language");
+  const initialLanguage = detectLanguageFromAcceptHeader(acceptLanguage);
+
+  return <html lang={initialLanguage} className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider initialLanguage={initialLanguage}><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /></LanguageProvider></ThemeProvider></body></html>;
 }
