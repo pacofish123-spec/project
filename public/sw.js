@@ -1,8 +1,15 @@
-// Web Push service worker. Deliberately minimal — its only job is to
+// Web Push service worker. Deliberately minimal — its main job is to
 // show a notification for whatever payload the server sent (see
-// src/lib/push/send.ts) and route a tap back into the app. No caching,
-// no offline support: this isn't a full PWA install strategy, just the
-// runtime a push notification needs to exist at all.
+// src/lib/push/send.ts) and route a tap back into the app.
+
+// No real offline/caching strategy on purpose — this is a live
+// marketplace (prices, availability, messages), and caching that
+// wrong is worse than not caching at all. This handler exists only so
+// installability tooling (Chrome's install criteria, PWABuilder's
+// Android packaging) sees a registered fetch listener; not calling
+// respondWith() just lets every request fall through to the network
+// exactly as if there were no service worker in the way.
+self.addEventListener("fetch", () => {});
 
 self.addEventListener("push", (event) => {
   let payload = { title: "yoRento", body: "" };
