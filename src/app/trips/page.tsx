@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, CarFront, CheckCirc
 import { AppHeader } from "@/components/app-header";
 import { SkeletonCards } from "@/components/skeleton";
 import { PublicProfilePopover } from "@/components/public-profile-popover";
+import { PaymentProviderButton } from "@/components/payment-provider-button";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
@@ -222,9 +223,13 @@ export default function TripsPage() {
                             {payChoiceId === booking.id ? (
                               <>
                                 {payProviders.map((provider) => (
-                                  <button key={provider.id} className="workflow-submit coral" type="button" disabled={payingId === booking.id} onClick={() => startPayment(booking.id, provider.id)}>
-                                    {payingId === booking.id ? t("paymentStarting") : provider.label}
-                                  </button>
+                                  <PaymentProviderButton
+                                    key={provider.id}
+                                    provider={provider}
+                                    busy={payingId === booking.id}
+                                    label={payingId === booking.id ? t("paymentStarting") : (provider.id === "stripe" ? t("payWithCardLabel") : provider.label)}
+                                    onClick={() => startPayment(booking.id, provider.id)}
+                                  />
                                 ))}
                                 <button className="workflow-link" type="button" onClick={() => setPayChoiceId("")}>{t("cancel")}</button>
                               </>
