@@ -25,4 +25,12 @@ export interface PaymentProvider {
   label: string;
   isConfigured(): boolean;
   createCheckoutSession(input: CheckoutSessionInput): Promise<CheckoutSessionResult>;
+  /**
+   * Whether this provider can settle a charge in the given currency.
+   * Omit when the provider (or its own gateway config) handles any
+   * currency it's given. When present and it returns false, the pay
+   * route converts the booking's total to USD before checkout — see
+   * src/app/api/bookings/[bookingId]/pay/route.ts.
+   */
+  supportsCurrency?(currency: string): boolean;
 }

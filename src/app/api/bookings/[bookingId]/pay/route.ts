@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authorization";
 import { getPaymentProvider } from "@/lib/payments";
 import { getSiteUrl } from "@/lib/site-url";
+import { convertApprox } from "@/lib/currency";
 
 // Creates a pending payment_records row (amount/currency come straight
 // off the booking — never trusted from the client) via
@@ -39,12 +40,30 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       ? `${(booking.vehicles as { make?: string }).make ?? ""} ${(booking.vehicles as { model?: string }).model ?? ""}`.trim()
       : "your yoRento booking";
 
+    // payment_records keeps the booking's real total/currency (e.g.
+    // DOP) as the source of truth. Some providers can't settle in that
+    // currency at all (PayPal has no DOP support — see paypal.ts), so
+    // convert what we actually send to checkout, not the debt itself.
+    let checkoutAmount = Number(booking.total);
+    let checkoutCurrency: string = booking.currency;
+    if (provider.supportsCurrency && !provider.supportsCurrency(checkoutCurrency)) {
+      const { data: rates } = await supabase.from("currency_rates").select("currency, usd_rate");
+      const converted = rates ? convertApprox(checkoutAmount, checkoutCurrency, "USD", rates) : null;
+      if (converted === null) {
+        return NextResponse.json({ error: `${provider.label} doesn't support payments in ${checkoutCurrency}.` }, { status: 400 });
+      }
+      checkoutAmount = converted;
+      checkoutCurrency = "USD";
+    }
+
     const session = await provider.createCheckoutSession({
       paymentRecordId: paymentRecord.id,
       bookingId,
-      amount: Number(booking.total),
-      currency: booking.currency,
-      description: `yoRento rental — ${vehicleLabel || "your booking"}`,
+      amount: checkoutAmount,
+      currency: checkoutCurrency,
+      description: checkoutCurrency === booking.currency
+        ? `yoRento rental — ${vehicleLabel || "your booking"}`
+        : `yoRento rental — ${vehicleLabel || "your booking"} (${booking.currency} ${Number(booking.total).toFixed(2)})`,
       successUrl: provider.id === "paypal"
         ? `${siteUrl}/api/bookings/${bookingId}/pay/paypal-return?payment_record_id=${paymentRecord.id}`
         : `${siteUrl}/trips?paid=1`,

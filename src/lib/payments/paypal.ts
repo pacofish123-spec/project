@@ -11,6 +11,21 @@ function isPaypalConfigured(): boolean {
   return Boolean(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
 }
 
+// PayPal's supported transaction currencies:
+// https://developer.paypal.com/docs/integration/direct/rest/currency-codes/
+// Notably absent: DOP — this marketplace's default currency. A DOP
+// order create otherwise fails with 422 CURRENCY_NOT_SUPPORTED, which
+// the pay route was surfacing as a generic "Unable to start payment."
+const PAYPAL_SUPPORTED_CURRENCIES = new Set([
+  "AUD", "BRL", "CAD", "CNY", "CZK", "DKK", "EUR", "HKD", "HUF", "ILS",
+  "JPY", "MYR", "MXN", "TWD", "NZD", "NOK", "PHP", "PLN", "GBP", "SGD",
+  "SEK", "CHF", "THB", "USD",
+]);
+
+function supportsCurrency(currency: string): boolean {
+  return PAYPAL_SUPPORTED_CURRENCIES.has(currency.toUpperCase());
+}
+
 async function getAccessToken(): Promise<string> {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
@@ -62,6 +77,7 @@ export const paypalProvider: PaymentProvider = {
   label: "PayPal",
   isConfigured: isPaypalConfigured,
   createCheckoutSession,
+  supportsCurrency,
 };
 
 // Called from the return route once the buyer approves on PayPal's
