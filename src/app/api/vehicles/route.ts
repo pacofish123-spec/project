@@ -116,6 +116,16 @@ export async function POST(request: Request) {
       if (!membership) return NextResponse.json({ error: "You are not authorized to list for this business." }, { status: 403 });
     }
 
+    // Checked here for a clear error before the insert attempt — the
+    // "owners and members insert vehicles" RLS policy enforces the same
+    // requirement underneath regardless (see migration 0037), so this
+    // is a friendlier error message, not the actual security boundary.
+    const { data: identityVerified } = await supabase.from("verification_records")
+      .select("id").eq("user_id", user.id).eq("verification_type", "identity").eq("status", "verified").maybeSingle();
+    if (!identityVerified) {
+      return NextResponse.json({ error: "Verify your ID before listing a vehicle.", code: "IDENTITY_VERIFICATION_REQUIRED" }, { status: 403 });
+    }
+
     const { data, error } = await supabase.from("vehicles").insert({
       owner_user_id: user.id,
       business_id: hostType === "business" ? body.businessId : null,

@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Minus, Plus, ShieldCheck } from "lucide-react";
 import { CalendarPicker } from "@/components/calendar-picker";
@@ -66,6 +67,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     setReturnLocation(value);
   }
   const [message, setMessage] = useState("");
+  const [identityBlocked, setIdentityBlocked] = useState(false);
   const [restoredNotice, setRestoredNotice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -75,6 +77,11 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
   // undefined = still checking, then true/false
   const [signedIn, setSignedIn] = useState<boolean | undefined>(undefined);
   const [showSignIn, setShowSignIn] = useState(false);
+  // undefined = not signed in yet / still checking, then true/false.
+  // Real enforcement is server-side (create_booking, migration 0037) —
+  // this just avoids sending a renter through the whole form only to
+  // be rejected at the very end.
+  const [identityVerified, setIdentityVerified] = useState<boolean | undefined>(undefined);
 
   const startsAt = startDate ? `${startDate}T${startTime || "00:00"}` : "";
   const endsAt = endDate ? `${endDate}T${endTime || "00:00"}` : "";
@@ -93,6 +100,14 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => setSignedIn(Boolean(session?.user)));
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!signedIn) return;
+    fetch("/api/identity/status").then(async (response) => {
+      const result = await response.json() as { verification?: { status: string } | null };
+      setIdentityVerified(response.ok && result.verification?.status === "verified");
+    }).catch(() => setIdentityVerified(false));
+  }, [signedIn]);
 
   // Restores whatever was mid-booking before a guest went off to sign
   // in or create an account — sign-in (OAuth or a fresh account) is a
@@ -173,13 +188,19 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
   async function submitBooking() {
     setBusy(true);
     setMessage("");
+    setIdentityBlocked(false);
     const response = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ vehicleId, startsAt, endsAt, pickupLocation, returnLocation }),
     });
-    const result = await response.json() as { error?: string; booking?: { id: string } };
-    if (!response.ok || !result.booking) { setBusy(false); setMessage(result.error ?? t("bookingGenericError")); return; }
+    const result = await response.json() as { error?: string; code?: string; booking?: { id: string } };
+    if (!response.ok || !result.booking) {
+      setBusy(false);
+      if (result.code === "IDENTITY_VERIFICATION_REQUIRED") { setIdentityBlocked(true); setMessage(t("bookingIdentityRequiredError")); return; }
+      setMessage(result.error ?? t("bookingGenericError"));
+      return;
+    }
 
     await Promise.all(Object.entries(selectedExtras).map(([extraId, quantity]) => {
       const extra = extras.find((item) => item.id === extraId);
@@ -198,6 +219,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    setIdentityBlocked(false);
     if (!startDate || !endDate || !pickupLocation || !returnLocation) {
       setMessage(t("bookingChooseDatesError"));
       return;
@@ -212,6 +234,11 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     if (signedIn === false) {
       saveDraft();
       setShowSignIn(true);
+      return;
+    }
+    if (identityVerified === false) {
+      setIdentityBlocked(true);
+      setMessage(t("bookingIdentityRequiredError"));
       return;
     }
     await submitBooking();
@@ -268,7 +295,12 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
         </div>
       )}
 
-      {message && <p className="workflow-error">{message}</p>}
+      {message && (
+        <p className="workflow-error">
+          {message}
+          {identityBlocked && <> <Link className="workflow-link" href="/verify-id">{t("bookingIdentityRequiredLink")}</Link></>}
+        </p>
+      )}
       <button className="workflow-submit coral" disabled={busy} type="submit"><CalendarDays size={17} />{busy ? t("bookingSubmitBusy") : t("bookingSubmit")}</button>
       <p className="admin-row-meta"><ShieldCheck size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{t("vehiclePricingNote")}</p>
     </form>

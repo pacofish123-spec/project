@@ -117,6 +117,20 @@ function NewVehicleForm() {
     supabase.auth.getUser().then(({ data }) => setSignedIn(Boolean(data.user)));
   }, []);
 
+  // undefined = still checking (or not signed in yet), then true/false.
+  // Every host needs a verified ID before listing a car — checked here
+  // so the long form isn't filled out only to be rejected at the end;
+  // the real enforcement is server-side (POST /api/vehicles + the
+  // vehicles insert RLS policy, see migration 0037).
+  const [identityVerified, setIdentityVerified] = useState<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (!signedIn) return;
+    fetch("/api/identity/status").then(async (response) => {
+      const result = await response.json() as { verification?: { status: string } | null };
+      setIdentityVerified(response.ok && result.verification?.status === "verified");
+    }).catch(() => setIdentityVerified(false));
+  }, [signedIn]);
+
   const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -217,6 +231,23 @@ function NewVehicleForm() {
             <section className="workflow-card">
               <div className="dashboard-message"><ShieldCheck size={23} /><p>{t("hostCarsSignInRequiredBody")}</p></div>
               <Link className="workflow-submit coral" href="/sign-in"><ArrowRight size={16} />{t("signIn")}</Link>
+            </section>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (signedIn === true && identityVerified === false) {
+    return (
+      <>
+        <AppHeader />
+        <main className="workflow-page">
+          <div className="page-width">
+            <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link></div>
+            <section className="workflow-card">
+              <div className="dashboard-message"><ShieldCheck size={23} /><p>{t("hostCarsIdentityRequiredBody")}</p></div>
+              <Link className="workflow-submit coral" href="/verify-id"><ArrowRight size={16} />{t("hostCarsIdentityRequiredAction")}</Link>
             </section>
           </div>
         </main>
