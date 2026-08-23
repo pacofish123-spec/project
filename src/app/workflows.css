@@ -343,6 +343,8 @@ html.dark .rating { color: #9fd7b5; }
 .shot-capture-slot.captured { border-style: solid; border-color: var(--pine); background: #eaf3ec; color: var(--pine); }
 .shot-capture-slot[aria-disabled="true"] { opacity: .6; cursor: default; }
 @media (max-width: 640px) { .shot-capture-grid { grid-template-columns: repeat(2, 1fr); } }
+.payout-tile-highlighted { border: 2px solid var(--coral); box-shadow: 0 0 0 3px color-mix(in srgb, var(--coral) 18%, transparent); }
+.payout-highlight-note { color: var(--coral) !important; font-weight: 700; }
 .profile-signed-in { margin-top: 24px; }
 .profile-email { margin: 2px 0 0; color: #78847d; font-size: 13px; font-weight: 400; }
 .profile-card-head { display: flex; align-items: center; gap: 16px; margin-bottom: 18px; }

@@ -76,15 +76,36 @@ export function constructStripeWebhookEvent(rawBody: string, signature: string):
 // connected account. That keeps the charge side simple and puts a
 // human in the loop before money leaves the platform.
 
+// Not every host's country is a supported Connect Express account
+// country (Dominican Republic, notably, as of writing) — Stripe
+// rejects account creation with an invalid_request_error naming the
+// country param. Duck-typed rather than checked against a specific
+// Stripe.errors.* class, since that error hierarchy has shifted across
+// SDK versions and every Stripe error carries these fields regardless.
+// Caught here and re-thrown as a distinct sentinel so the route layer
+// can steer the host to PayPal instead of surfacing Stripe's raw
+// message, which a host can't act on.
+function isStripeCountryError(error: unknown): boolean {
+  const err = error as { type?: string; param?: string; message?: string } | null;
+  if (!err) return false;
+  if (err.param === "country") return true;
+  return err.type === "invalid_request_error" && /\bcountry\b/i.test(err.message ?? "");
+}
+
 export async function createStripeConnectAccount(email: string | undefined, countryCode: string): Promise<string> {
   const stripe = getStripeClient();
-  const account = await stripe.accounts.create({
-    type: "express",
-    country: countryCode || "US",
-    email,
-    capabilities: { transfers: { requested: true }, card_payments: { requested: true } },
-  });
-  return account.id;
+  try {
+    const account = await stripe.accounts.create({
+      type: "express",
+      country: countryCode || "US",
+      email,
+      capabilities: { transfers: { requested: true }, card_payments: { requested: true } },
+    });
+    return account.id;
+  } catch (error) {
+    if (isStripeCountryError(error)) throw new Error("STRIPE_COUNTRY_NOT_SUPPORTED");
+    throw error;
+  }
 }
 
 export async function createStripeConnectOnboardingLink(accountId: string, refreshUrl: string, returnUrl: string): Promise<string> {
