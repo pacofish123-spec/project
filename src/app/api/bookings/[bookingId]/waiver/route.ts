@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authorization";
 import { getPaymentProvider } from "@/lib/payments";
 import { getSiteUrl } from "@/lib/site-url";
+import { markPaymentRecordFailed } from "@/lib/mark-payment-failed";
 
 // The other half of the deposit/waiver pay-time choice — a real,
 // non-refundable charge (kind='insurance_waiver', migration 0044) at
@@ -40,17 +41,27 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       ? `${(booking.vehicles as { make?: string }).make ?? ""} ${(booking.vehicles as { model?: string }).model ?? ""}`.trim()
       : "your yoRento booking";
 
-    const session = await provider.createCheckoutSession({
-      paymentRecordId: paymentRecord.id,
-      bookingId,
-      amount: Number(paymentRecord.amount),
-      currency: paymentRecord.currency,
-      description: `yoRento damage waiver — ${vehicleLabel || "your booking"}`,
-      successUrl: provider.id === "paypal"
-        ? `${siteUrl}/api/bookings/${bookingId}/waiver/paypal-return?payment_record_id=${paymentRecord.id}`
-        : `${siteUrl}/trips?waiver=1`,
-      cancelUrl: `${siteUrl}/trips?waiver=0`,
-    });
+    let session;
+    try {
+      session = await provider.createCheckoutSession({
+        paymentRecordId: paymentRecord.id,
+        bookingId,
+        amount: Number(paymentRecord.amount),
+        currency: paymentRecord.currency,
+        description: `yoRento damage waiver — ${vehicleLabel || "your booking"}`,
+        successUrl: provider.id === "paypal"
+          ? `${siteUrl}/api/bookings/${bookingId}/waiver/paypal-return?payment_record_id=${paymentRecord.id}`
+          : `${siteUrl}/trips?waiver=1`,
+        cancelUrl: `${siteUrl}/trips?waiver=0`,
+      });
+    } catch (providerError) {
+      // create_insurance_waiver_charge's WAIVER_ALREADY_CHARGED guard
+      // blocks on status in ('pending', 'paid') — a stray 'pending' row
+      // here would strand every retry forever without this. See
+      // mark-payment-failed.ts.
+      await markPaymentRecordFailed(paymentRecord.id);
+      throw providerError;
+    }
 
     return NextResponse.json({ redirectUrl: session.redirectUrl });
   } catch (error) {

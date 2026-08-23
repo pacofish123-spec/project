@@ -6,6 +6,7 @@ import { createDepositAuthOrder } from "@/lib/payments/paypal";
 import { convertApprox } from "@/lib/currency";
 import { getSiteUrl } from "@/lib/site-url";
 import { PLATFORM_DEPOSIT_USD } from "@/lib/platform-policy";
+import { markPaymentRecordFailed } from "@/lib/mark-payment-failed";
 
 // Mirrors pay/route.ts's shape, but for the optional $300 refundable
 // deposit (kind='deposit_hold', migration 0044) rather than the rental
@@ -68,7 +69,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       cancelUrl: `${siteUrl}/trips?deposit=0`,
     };
 
-    const session = provider === "paypal" ? await createDepositAuthOrder(sessionInput) : await createDepositHoldSession(sessionInput);
+    let session;
+    try {
+      session = provider === "paypal" ? await createDepositAuthOrder(sessionInput) : await createDepositHoldSession(sessionInput);
+    } catch (providerError) {
+      // create_deposit_hold's DEPOSIT_ALREADY_HELD guard blocks on
+      // status in ('pending', 'authorized') — unlike the regular charge
+      // flow, a stray 'pending' row here really would strand every
+      // retry forever without this. See mark-payment-failed.ts.
+      await markPaymentRecordFailed(paymentRecord.id);
+      throw providerError;
+    }
 
     return NextResponse.json({ redirectUrl: session.redirectUrl });
   } catch (error) {
