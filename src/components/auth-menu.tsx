@@ -8,6 +8,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { hasCapability } from "@/lib/capabilities";
 import { useLanguage } from "@/lib/i18n";
 import { OAuthButtons } from "@/components/oauth-buttons";
+import { VerifiedAvatar } from "@/components/verified-avatar";
 
 // Header account control: a coral-filled icon plus a first-name greeting
 // when signed in, opening a popover instead of navigating away. Signed
@@ -20,6 +21,8 @@ export function AuthMenu() {
   // undefined = still checking, null = signed out, string = signed-in email
   const [email, setEmail] = useState<string | null | undefined>(undefined);
   const [firstName, setFirstName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [identityVerified, setIdentityVerified] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isHost, setIsHost] = useState(false);
   const [open, setOpen] = useState(false);
@@ -36,15 +39,16 @@ export function AuthMenu() {
   }, []);
 
   useEffect(() => {
-    if (!email) { queueMicrotask(() => { setFirstName(null); setIsAdmin(false); setIsHost(false); }); return; }
+    if (!email) { queueMicrotask(() => { setFirstName(null); setAvatarUrl(null); setIdentityVerified(false); setIsAdmin(false); setIsHost(false); }); return; }
     let cancelled = false;
     const supabase = createSupabaseBrowserClient();
     if (!supabase) return;
     supabase.auth.getUser().then(async ({ data }) => {
       const user = data.user;
       if (!user || cancelled) return;
-      const [{ data: profile }, admin, ownedVehicles, memberships] = await Promise.all([
-        supabase.from("profiles").select("display_name").eq("id", user.id).maybeSingle(),
+      const [{ data: profile }, { data: identityRecord }, admin, ownedVehicles, memberships] = await Promise.all([
+        supabase.from("profiles").select("display_name, avatar_url").eq("id", user.id).maybeSingle(),
+        supabase.from("verification_records").select("id").eq("user_id", user.id).eq("verification_type", "identity").eq("status", "verified").maybeSingle(),
         hasCapability(supabase, user.id, "can_manage_platform"),
         supabase.from("vehicles").select("id", { count: "exact", head: true }).eq("owner_user_id", user.id),
         supabase.from("business_members").select("business_id").eq("user_id", user.id),
@@ -52,6 +56,8 @@ export function AuthMenu() {
       if (cancelled) return;
       const source = (profile?.display_name as string | undefined)?.trim() || email.split("@")[0];
       setFirstName(source.split(/\s+/)[0]);
+      setAvatarUrl(profile?.avatar_url ?? null);
+      setIdentityVerified(Boolean(identityRecord));
       setIsAdmin(admin);
 
       // "Host dashboard" only means something once you've actually listed
@@ -121,7 +127,7 @@ export function AuthMenu() {
         aria-label={signedIn ? t("authAccountMenu") : t("signIn")}
         onClick={() => setOpen((value) => !value)}
       >
-        <UserRound size={18} />
+        {signedIn ? <VerifiedAvatar avatarUrl={avatarUrl} verified={identityVerified} alt="" /> : <UserRound size={18} />}
         {!signedIn && <span className="auth-signin-label">{t("signIn")}</span>}
       </button>
 

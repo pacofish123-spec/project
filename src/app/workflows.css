@@ -87,8 +87,8 @@ html.dark .vehicle-feature-icons span { color: #a9b7ad; }
 html.dark .vehicle-specs-list { color: #b8c6bc; }
 
 .host-profile-chip { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 20px; padding: 10px 14px; border: 1px solid #d4dfd6; border-radius: 8px; background: var(--paper); text-align: left; }
-.host-avatar { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; overflow: hidden; border-radius: 50%; background: #eaf2eb; color: var(--pine); }
-.host-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.host-avatar { display: grid; place-items: center; flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%; background: #eaf2eb; color: var(--pine); }
+.host-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
 .host-avatar.large { width: 56px; height: 56px; }
 .host-chip-text { display: grid; gap: 3px; }
 .host-chip-text strong { color: var(--ink); font-size: 14px; font-weight: 700; }
@@ -351,8 +351,13 @@ html.dark .rating { color: #9fd7b5; }
 .profile-pending-task { display: grid; gap: 6px; margin: 4px 0 22px; padding: 16px 18px; border: 1px dashed #e3a15c; border-radius: 6px; background: #fdf1d9; }
 html.dark .profile-pending-task { background: #362a17; border-color: #8a5a10; }
 .verified-avatar { position: relative; }
-.verified-avatar-badge { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #0754b8; color: #fff; border: 2px solid var(--paper); }
+.verified-avatar-badge { position: absolute; right: -2px; bottom: -2px; z-index: 1; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: #0754b8; color: #fff; border: 2px solid var(--paper); }
 .host-avatar.large .verified-avatar-badge { width: 24px; height: 24px; }
+/* A thin ring around the whole photo, in addition to the corner badge
+   — a second, more glanceable signal than the small badge alone,
+   especially at list-row sizes where the badge itself is tiny. */
+.verified-avatar.is-verified { box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px #0754b8; }
+html.dark .verified-avatar.is-verified { box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px #0754b8; }
 .profile-photo-picker { display: grid; gap: 12px; margin-top: 6px; }
 .profile-photo-preview { display: flex; }
 .profile-photo-actions { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
