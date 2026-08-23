@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/authorization";
 import { deliverRentalAgreement } from "@/lib/rental-agreement-service";
 import { notifyWhatsApp } from "@/lib/notify-whatsapp";
+import { releaseDepositForBooking } from "@/lib/release-deposit";
 
 const allowedStatuses = ["accepted", "declined", "cancelled"] as const;
 
@@ -36,6 +37,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ bo
     // already committed above.
     if (body.status === "accepted") {
       deliverRentalAgreement(supabase, bookingId).catch((error) => console.error("deliverRentalAgreement error:", error));
+    }
+
+    // A cancelled trip never happens, so any deposit hold placed on it
+    // has nothing left to secure — release it immediately rather than
+    // making the renter wait out Stripe's ~7-day / PayPal's ~29-day
+    // auto-expiry with $300 tied up on their card for no reason.
+    if (body.status === "cancelled") {
+      releaseDepositForBooking(bookingId, supabase, "booking cancelled").catch((error) => console.error("releaseDepositForBooking error:", error));
     }
 
     // Best-effort WhatsApp nudge alongside the in-app notification the

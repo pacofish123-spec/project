@@ -33,7 +33,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       .eq("booking_id", bookingId).eq("kind", "deposit_hold").eq("status", "authorized").maybeSingle();
     if (holdError || !hold?.processor_reference) return NextResponse.json({ error: "No held deposit found on this booking." }, { status: 404 });
 
-    const captureAmount = body.amount !== undefined && body.amount > 0 && body.amount < Number(hold.amount) ? body.amount : undefined;
+    if (body.amount !== undefined && (body.amount <= 0 || body.amount > Number(hold.amount))) {
+      return NextResponse.json({ error: `Capture amount must be between 0 and the held amount (${hold.amount}).` }, { status: 400 });
+    }
+    const captureAmount = body.amount !== undefined && body.amount < Number(hold.amount) ? body.amount : undefined;
 
     if (hold.provider === "stripe") await captureDepositHold(hold.processor_reference, captureAmount, hold.currency);
     else if (hold.provider === "paypal") await capturePaypalAuthorization(hold.processor_reference, captureAmount, hold.currency);
