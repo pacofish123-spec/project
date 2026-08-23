@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { BadgeCheck, CarFront, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { BadgeCheck, CarFront, ShieldCheck, Smartphone, Sparkles, UserRound } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { convertApprox, defaultCurrencyByLanguage, type CurrencyRate } from "@/lib/currency";
 import { formatMoney } from "@/lib/format";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
+import { PLATFORM_DEPOSIT_USD } from "@/lib/platform-policy";
 
 export interface VehicleCardData {
   id: string;
@@ -23,6 +24,8 @@ export interface VehicleCardData {
   promoted?: boolean;
   verified?: boolean;
   host_identity_verified?: boolean;
+  vin_verified?: boolean;
+  phone_verified?: boolean;
   photo_paths?: string[] | null;
   amenities?: string[] | null;
   rental_terms?: string[] | null;
@@ -42,8 +45,15 @@ export function VehicleCard({ vehicle, rates }: { vehicle: VehicleCardData; rate
       <div className={`vehicle-image ${photoUrl ? "" : "vehicle-image-placeholder"}`} style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}>
         {!photoUrl && <CarFront size={40} />}
         <div className="vehicle-card-badges">
-          {vehicle.verified && <span className="verified-badge verified-status-badge" title={t("verifiedBadgeExplainer")}><ShieldCheck size={13} /> {t("verificationVerified")}</span>}
+          {/* Three trust badges, each a distinct claim — ID (identity
+              document check), Specs (VIN-decoded against the listing,
+              folds in what the old generic "Verified" admin-review
+              badge used to gesture at ambiguously), Phone (OTP via
+              WhatsApp or SMS). Never more than one badge implying the
+              same thing. */}
           {vehicle.host_identity_verified && <span className="verified-badge id-verified-badge" title={t("idVerifiedBadgeExplainer")}><BadgeCheck size={13} /> {t("idVerifiedBadge")}</span>}
+          {vehicle.vin_verified && <span className="verified-badge verified-status-badge" title={t("specsVerifiedBadgeExplainer")}><ShieldCheck size={13} /> {t("specsVerifiedBadge")}</span>}
+          {vehicle.phone_verified && <span className="verified-badge phone-verified-badge" title={t("phoneVerifiedBadgeExplainer")}><Smartphone size={13} /> {t("phoneVerifiedBadge")}</span>}
           {vehicle.promoted && <span className="verified-badge promoted-badge"><Sparkles size={13} /> {t("promotedBadge")}</span>}
         </div>
       </div>
@@ -69,6 +79,7 @@ export function VehicleCard({ vehicle, rates }: { vehicle: VehicleCardData; rate
             {vehicle.host_type === "individual" ? t("vehiclePersonalOwner") : t("vehicleBusinessLabel")}
           </span>
         </div>
+        <p className="vehicle-deposit-note">{t("vehicleCardDepositNote", { amount: String(PLATFORM_DEPOSIT_USD) })}</p>
       </div>
     </Link>
   );

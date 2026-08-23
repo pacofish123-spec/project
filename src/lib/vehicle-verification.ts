@@ -32,12 +32,32 @@ export async function attachHostIdentityVerifiedFlag<T extends { owner_user_id: 
   return vehicles.map((vehicle) => ({ ...vehicle, host_identity_verified: verifiedOwnerIds.has(vehicle.owner_user_id) }));
 }
 
+// Phone verification (verification_records.verification_type = 'phone',
+// migration 0045/0046) — same shape as attachHostIdentityVerifiedFlag,
+// a separate signal from ID verification: a host can be phone-verified
+// without having done the full ID check, or vice versa.
+export async function attachPhoneVerifiedFlag<T extends { owner_user_id: string }>(
+  supabase: SupabaseClient,
+  vehicles: T[],
+): Promise<(T & { phone_verified: boolean })[]> {
+  const ownerIds = [...new Set(vehicles.map((vehicle) => vehicle.owner_user_id))];
+  const { data: verifiedRecords } = ownerIds.length
+    ? await supabase.from("verification_records").select("user_id").eq("verification_type", "phone").eq("status", "verified").in("user_id", ownerIds)
+    : { data: [] as { user_id: string }[] };
+  const verifiedOwnerIds = new Set((verifiedRecords ?? []).map((record) => record.user_id));
+  return vehicles.map((vehicle) => ({ ...vehicle, phone_verified: verifiedOwnerIds.has(vehicle.owner_user_id) }));
+}
+
 // Convenience for the common case (homepage, /search, per-destination
-// pages, /api/vehicles): both trust badges in a single pass.
+// pages, /api/vehicles): every trust badge in a single pass. Note
+// vin_verified isn't attached here — it's already a plain column on
+// `vehicles` (migration 0045), present on every row fetched with
+// `select("*")`, so there's nothing to join.
 export async function attachTrustBadges<T extends { id: string; owner_user_id: string }>(
   supabase: SupabaseClient,
   vehicles: T[],
-): Promise<(T & { verified: boolean; host_identity_verified: boolean })[]> {
+): Promise<(T & { verified: boolean; host_identity_verified: boolean; phone_verified: boolean })[]> {
   const withVerified = await attachVerifiedFlag(supabase, vehicles);
-  return attachHostIdentityVerifiedFlag(supabase, withVerified);
+  const withIdentity = await attachHostIdentityVerifiedFlag(supabase, withVerified);
+  return attachPhoneVerifiedFlag(supabase, withIdentity);
 }

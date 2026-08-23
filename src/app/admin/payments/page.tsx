@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Wallet } from "lucide-react";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
+import { AdminIdChip, AdminSearchBar } from "@/components/admin-search-bar";
 
 interface PaymentRecord {
   id: string;
   booking_id: string;
+  payer_user_id: string | null;
+  payee_user_id: string | null;
   provider: string;
   kind: "charge" | "refund" | "payout";
   amount: number;
@@ -24,6 +27,7 @@ export default function AdminPaymentsPage() {
   const [message, setMessage] = useState("Loading payments...");
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState("");
+  const [query, setQuery] = useState("");
 
   function load() {
     fetch("/api/admin/payments").then(async (response) => {
@@ -57,17 +61,31 @@ export default function AdminPaymentsPage() {
 
   const paidOutBookingIds = new Set((records ?? []).filter((record) => record.kind === "payout" && record.status === "paid").map((record) => record.booking_id));
 
+  const visible = useMemo(() => {
+    if (!records) return [];
+    const needle = query.trim().toLowerCase();
+    if (!needle) return records;
+    return records.filter((record) =>
+      record.id.toLowerCase().includes(needle)
+      || record.booking_id.toLowerCase().includes(needle)
+      || (record.payer_user_id ?? "").toLowerCase().includes(needle)
+      || (record.payee_user_id ?? "").toLowerCase().includes(needle)
+      || record.payer_display_name.toLowerCase().includes(needle)
+      || record.payee_display_name.toLowerCase().includes(needle));
+  }, [records, query]);
+
   return (
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">Payments</p>
       <p className="workflow-intro">Every charge, refund, and host payout that has moved real money, across every connected processor.</p>
+      <AdminSearchBar value={query} onChange={setQuery} placeholder="Search by payment id, booking id, payer/payee name or id…" resultCount={visible.length} totalCount={records?.length ?? 0} />
       {loading && <SkeletonCards />}
       {!loading && message && <div className="dashboard-message"><Wallet size={22} /><p>{message}</p></div>}
-      {records !== null && records.length === 0 && <p className="admin-row-meta">No payments recorded yet.</p>}
+      {records !== null && visible.length === 0 && <p className="admin-row-meta">No payments match this search.</p>}
 
-      {records && records.length > 0 && (
+      {visible.length > 0 && (
         <div className="trip-list">
-          {records.map((record) => {
+          {visible.map((record) => {
             const vehicle = record.bookings?.vehicles;
             const canRefund = record.kind === "charge" && record.status === "paid";
             const canPayout = record.kind === "charge" && record.status === "paid" && record.bookings?.status === "completed" && !paidOutBookingIds.has(record.booking_id);
@@ -78,7 +96,7 @@ export default function AdminPaymentsPage() {
                   <span className={`trip-status ${record.status === "paid" ? "trip-status-accepted" : record.status === "failed" ? "trip-status-declined" : ""}`}>{record.status}</span>
                 </div>
                 <p className="admin-row-meta">
-                  {record.kind === "payout" ? `To ${record.payee_display_name}` : `From ${record.payer_display_name}`} · {record.provider} · {formatDate(record.created_at)}
+                  {record.kind === "payout" ? `To ${record.payee_display_name}` : `From ${record.payer_display_name}`} · {record.provider} · {formatDate(record.created_at)} · <AdminIdChip id={record.id} />
                 </p>
                 <div className="trip-footer">
                   <strong>{formatMoney(record.amount, record.currency)}</strong>

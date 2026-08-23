@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Star, UserRound, X } from "lucide-react";
+import { BadgeCheck, Star, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
+import { VerifiedAvatar } from "@/components/verified-avatar";
 
 export interface HostSummary {
   id: string;
@@ -58,7 +59,7 @@ export function HostProfileCard({ host, hostTypeLabel }: { host: HostSummary | n
   return (
     <>
       <button type="button" className="host-profile-chip" onClick={openPopover}>
-        <span className="host-avatar">{host.avatar_url ? <img src={host.avatar_url} alt="" /> : <UserRound size={20} />}</span>
+        <VerifiedAvatar avatarUrl={host.avatar_url} verified={host.identity_verified} />
         <span className="host-chip-text">
           <span className="host-chip-name-row">
             <strong>{host.display_name || t("hostAnonymousLabel")}</strong>
@@ -75,7 +76,7 @@ export function HostProfileCard({ host, hostTypeLabel }: { host: HostSummary | n
           <div className="host-popover-card" onClick={(event) => event.stopPropagation()}>
             <button type="button" className="drawer-close host-popover-close" aria-label={t("close")} onClick={() => setOpen(false)}><X size={18} /></button>
             <div className="host-popover-head">
-              <span className="host-avatar large">{host.avatar_url ? <img src={host.avatar_url} alt="" /> : <UserRound size={30} />}</span>
+              <VerifiedAvatar avatarUrl={host.avatar_url} verified={host.identity_verified} size="large" />
               <div>
                 <span className="host-popover-name-row">
                   <strong>{host.display_name || t("hostAnonymousLabel")}</strong>

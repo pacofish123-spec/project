@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { BadgeCheck, Star, UserRound, X } from "lucide-react";
+import { BadgeCheck, Star, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { formatDate } from "@/lib/format";
+import { VerifiedAvatar } from "@/components/verified-avatar";
 
 interface PublicProfile {
   display_name: string | null;
@@ -69,7 +70,7 @@ export function PublicProfilePopover({ userId, displayName }: { userId: string; 
             {profile && (
               <>
                 <div className="host-popover-head">
-                  <span className="host-avatar large">{profile.avatar_url ? <img src={profile.avatar_url} alt="" /> : <UserRound size={30} />}</span>
+                  <VerifiedAvatar avatarUrl={profile.avatar_url} verified={identityVerified} size="large" />
                   <div>
                     <span className="host-popover-name-row">
                       <strong>{profile.display_name || displayName}</strong>

@@ -1,12 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { ArrowLeft, Check, ShieldCheck } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
 
 export default function TrustPage() {
   const { t } = useLanguage();
+  // Off until the real Casa del Conductor membership deal closes (see
+  // platform_settings, migration 0043) — never claim it before then.
+  const [cdcEnabled, setCdcEnabled] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/platform-settings").then(async (response) => {
+      const result = await response.json() as { settings?: { cdc_membership_enabled?: boolean } };
+      if (response.ok) setCdcEnabled(Boolean(result.settings?.cdc_membership_enabled));
+    }).catch(() => {});
+  }, []);
+
   return (
     <>
       <AppHeader />
@@ -22,6 +34,13 @@ export default function TrustPage() {
               <p><Check size={18} /> {t("trustItem2")}</p>
               <p><Check size={18} /> {t("trustItem3")}</p>
             </div>
+
+            {cdcEnabled && (
+              <div className="trust-list">
+                <p><ShieldCheck size={18} /> <strong>{t("cdcTrustTitle")}</strong></p>
+                <p style={{ marginLeft: 26, color: "#6c7971" }}>{t("cdcTrustBody")}</p>
+              </div>
+            )}
 
             <h2 className="faq-title">{t("faqTitle")}</h2>
             <div className="faq-list">

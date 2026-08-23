@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireCapability } from "@/lib/authorization";
+import { notifyWhatsApp } from "@/lib/notify-whatsapp";
 
 interface BookingInput {
   vehicleId?: string;
@@ -12,7 +13,7 @@ interface BookingInput {
 export async function GET() {
   try {
     const { supabase, user } = await requireCapability("can_rent");
-    const { data, error } = await supabase.from("bookings").select("*, vehicles(make, model, year, location_city, host_type, photo_paths), payment_records(status, kind, provider)").eq("renter_user_id", user.id).order("starts_at", { ascending: false });
+    const { data, error } = await supabase.from("bookings").select("*, vehicles(make, model, year, location_city, host_type, photo_paths), payment_records(status, kind, provider, amount, currency)").eq("renter_user_id", user.id).order("starts_at", { ascending: false });
     if (error) return NextResponse.json({ error: "Unable to load trips." }, { status: 500 });
     return NextResponse.json({ bookings: data });
   } catch (error) {
@@ -50,11 +51,20 @@ export async function POST(request: Request) {
     if (error) {
       const reason = error.message ?? "";
       if (reason.includes("ACCOUNT_SUSPENDED")) return NextResponse.json({ error: "Your account is suspended and can't book right now." }, { status: 403 });
+      if (reason.includes("PROFILE_PHOTO_REQUIRED")) return NextResponse.json({ error: "Add a profile photo before requesting a booking.", code: "PROFILE_PHOTO_REQUIRED" }, { status: 403 });
       if (reason.includes("IDENTITY_VERIFICATION_REQUIRED")) return NextResponse.json({ error: "Verify your ID before requesting a booking.", code: "IDENTITY_VERIFICATION_REQUIRED" }, { status: 403 });
       if (reason.includes("VEHICLE_NOT_AVAILABLE")) return NextResponse.json({ error: "Vehicle is not available." }, { status: 404 });
       if (reason.includes("DATES_UNAVAILABLE")) return NextResponse.json({ error: "Those dates are no longer available." }, { status: 409 });
       if (reason.includes("INVALID_DATES") || reason.includes("LOCATIONS_REQUIRED")) return NextResponse.json({ error: "Choose a valid rental period." }, { status: 400 });
       return NextResponse.json({ error: "Unable to create booking request." }, { status: 500 });
+    }
+
+    // Best-effort WhatsApp nudge to the host, alongside the in-app
+    // 'booking_requested' notification create_booking() already sends
+    // (0040_profile_photos_and_admin_mini_profile.sql).
+    if (booking) {
+      const { data: vehicle } = await supabase.from("vehicles").select("make, model, owner_user_id").eq("id", booking.vehicle_id).maybeSingle();
+      if (vehicle) notifyWhatsApp(supabase, vehicle.owner_user_id, `New booking request for your ${vehicle.make} ${vehicle.model} — review it in the yoRento app.`);
     }
 
     return NextResponse.json({ booking }, { status: 201 });

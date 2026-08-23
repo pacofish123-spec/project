@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, CarFront, LocateFixed } from "lucide-react";
 import { SearchPanel } from "@/components/search-panel";
 import { FiltersButton, type SearchFilters } from "@/components/filters-button";
+import { SelectField } from "@/components/select-field";
 import { VehicleCard, type VehicleCardData } from "@/components/vehicle-card";
 import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
@@ -35,6 +36,7 @@ export function SearchResultsClient({ initialDestination, initialStartDate, init
   const [locating, setLocating] = useState(false);
   const [dates, setDates] = useState({ startDate: initialStartDate, endDate: initialEndDate });
   const [filters, setFilters] = useState<SearchFilters>(emptyFilters);
+  const [sort, setSort] = useState<"" | "price_asc" | "price_desc">("");
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -46,12 +48,13 @@ export function SearchResultsClient({ initialDestination, initialStartDate, init
     if (filters.minPrice) params.set("minPrice", filters.minPrice);
     if (filters.maxPrice) params.set("maxPrice", filters.maxPrice);
     if (filters.seats) params.set("seats", filters.seats);
+    if (sort) params.set("sort", sort);
     fetch(`/api/vehicles?${params.toString()}`).then(async (response) => {
       const result = await response.json() as { vehicles?: VehicleCardData[]; error?: string };
       if (!response.ok) { setError(result.error ?? "Unable to load vehicles."); setVehicles([]); return; }
       setVehicles(result.vehicles ?? []);
     }).catch(() => { setError("Unable to load vehicles."); setVehicles([]); });
-  }, [destination, dates, nearMe, filters]);
+  }, [destination, dates, nearMe, filters, sort]);
 
   function findNearMe() {
     if (!navigator.geolocation) { setError(t("locationDenied")); return; }
@@ -89,6 +92,19 @@ export function SearchResultsClient({ initialDestination, initialStartDate, init
 
         <div className="results-toolbar">
           <FiltersButton filters={filters} onFiltersChange={setFilters} />
+          <div className="sort-select">
+            <SelectField
+              name="sort"
+              label={t("sortLabel")}
+              defaultValue={sort}
+              options={[
+                { value: "", label: t("sortRecommended") },
+                { value: "price_asc", label: t("sortPriceLowToHigh") },
+                { value: "price_desc", label: t("sortPriceHighToLow") },
+              ]}
+              onChange={(value) => setSort(value as "" | "price_asc" | "price_desc")}
+            />
+          </div>
           <div className="admin-filters">
             <button className={nearMe ? "active" : ""} type="button" disabled={locating} onClick={findNearMe}>
               <LocateFixed size={13} style={{ verticalAlign: "-2px", marginRight: 5 }} />{t("nearMeButton")}

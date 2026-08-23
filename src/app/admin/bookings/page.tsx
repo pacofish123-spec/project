@@ -4,16 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarClock } from "lucide-react";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
+import { AdminIdChip, AdminSearchBar } from "@/components/admin-search-bar";
 
 interface AdminBooking {
   id: string;
+  vehicle_id: string;
   status: string;
   starts_at: string;
   ends_at: string;
   total: number;
   currency: string;
   created_at: string;
+  renter_user_id: string;
   renter_display_name: string;
+  renter_date_of_birth: string | null;
   vehicles?: { make?: string; model?: string; year?: number; host_type?: string } | null;
 }
 
@@ -25,6 +29,7 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
   const [busyId, setBusyId] = useState("");
+  const [query, setQuery] = useState("");
 
   function load() {
     fetch("/api/admin/bookings").then(async (response) => {
@@ -45,11 +50,24 @@ export default function AdminBookingsPage() {
     setBusyId("");
   }
 
-  const visible = useMemo(() => (bookings ?? []).filter((booking) => filter === "all" || booking.status === filter), [bookings, filter]);
+  const statusFiltered = useMemo(() => (bookings ?? []).filter((booking) => filter === "all" || booking.status === filter), [bookings, filter]);
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return statusFiltered;
+    return statusFiltered.filter((booking) =>
+      booking.id.toLowerCase().includes(needle)
+      || booking.vehicle_id.toLowerCase().includes(needle)
+      || booking.renter_user_id.toLowerCase().includes(needle)
+      || booking.renter_display_name.toLowerCase().includes(needle)
+      || (booking.renter_date_of_birth ?? "").includes(needle)
+      || (booking.vehicles?.make ?? "").toLowerCase().includes(needle)
+      || (booking.vehicles?.model ?? "").toLowerCase().includes(needle));
+  }, [statusFiltered, query]);
 
   return (
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">All bookings ({bookings?.length ?? 0})</p>
+      <AdminSearchBar value={query} onChange={setQuery} placeholder="Search by booking id, car id, renter name/id/DOB, or make/model…" resultCount={visible.length} totalCount={statusFiltered.length} />
       <div className="admin-filters">
         {filters.map((option) => (
           <button key={option} className={filter === option ? "active" : ""} type="button" onClick={() => setFilter(option)}>{option.replace("_", " ")}</button>
@@ -66,7 +84,7 @@ export default function AdminBookingsPage() {
                 <strong>{booking.vehicles ? `${booking.vehicles.make} ${booking.vehicles.model}` : "Vehicle"}</strong>
                 <span className={`trip-status trip-status-${booking.status}`}>{booking.status.replace("_", " ")}</span>
               </div>
-              <p className="admin-row-meta">{booking.renter_display_name} · {formatDate(booking.starts_at)} – {formatDate(booking.ends_at)}</p>
+              <p className="admin-row-meta">{booking.renter_display_name} · {formatDate(booking.starts_at)} – {formatDate(booking.ends_at)} · <AdminIdChip id={booking.id} /></p>
               <div className="trip-footer">
                 <strong>{formatMoney(booking.total, booking.currency)}</strong>
                 <div className="trip-actions">

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { ArrowLeft, Camera, Check, Gauge } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { CONDITION_REPORT_SHOT_KEYS, type ConditionReportShot, type ConditionReportShotKey } from "@/lib/condition-report-shots";
+import type { TranslationKey } from "@/lib/translations";
 
 interface Report {
   id: string;
@@ -14,11 +16,23 @@ interface Report {
   mileage: number | null;
   notes: string | null;
   photo_paths: string[];
+  shots?: Partial<Record<ConditionReportShotKey, ConditionReportShot>>;
   acknowledged_by: string | null;
   acknowledged_at: string | null;
 }
 
 const MAX_PHOTO_BYTES = 50 * 1024 * 1024;
+
+const shotLabelKey: Record<ConditionReportShotKey, TranslationKey> = {
+  front: "shotLabelFront",
+  back: "shotLabelBack",
+  left: "shotLabelLeft",
+  right: "shotLabelRight",
+  interior_front: "shotLabelInteriorFront",
+  interior_rear: "shotLabelInteriorRear",
+  odometer: "shotLabelOdometer",
+  tyre_tread: "shotLabelTyreTread",
+};
 
 // Stored as the same 0-100 integer column it always was — just picked
 // from a fuel-gauge-shaped set of stops instead of typed as a raw
@@ -65,36 +79,40 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
   const [mileage, setMileage] = useState(report?.mileage?.toString() ?? "");
   const [notes, setNotes] = useState(report?.notes ?? "");
   const [busy, setBusy] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [pendingPhotoPaths, setPendingPhotoPaths] = useState<string[]>([]);
+  const [uploadingShot, setUploadingShot] = useState<ConditionReportShotKey | "">("");
+  const [shots, setShots] = useState<Partial<Record<ConditionReportShotKey, ConditionReportShot>>>(report?.shots ?? {});
   const [error, setError] = useState("");
 
   const isOwnReport = report && report.reported_by === selfId;
   const canEdit = !report || isOwnReport;
+  const allShotsCaptured = CONDITION_REPORT_SHOT_KEYS.every((key) => shots[key]?.path);
 
-  async function handlePhotoSelect(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
+  // One labeled slot at a time, not a bulk multi-upload — a fixed
+  // sequence is the whole point of the guided capture (wedge 03): no
+  // renter/host can submit a return report with three angles of the
+  // dashboard and nothing else.
+  async function handleShotSelect(key: ConditionReportShotKey, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
     event.target.value = "";
-    if (files.length === 0) return;
+    if (!file) return;
+    if (file.size > MAX_PHOTO_BYTES || !file.type.startsWith("image/")) { setError(t("photoUploadError")); return; }
     const supabase = createSupabaseBrowserClient();
     if (!supabase) return;
-    setUploading(true);
+    setUploadingShot(key);
     setError("");
-    const uploaded: string[] = [];
-    for (const file of files) {
-      if (file.size > MAX_PHOTO_BYTES || !file.type.startsWith("image/")) continue;
-      const path = `${bookingId}/${stage}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage.from("condition-reports").upload(path, file);
-      if (uploadError) continue;
-      uploaded.push(path);
-    }
-    if (uploaded.length < files.length) setError(t("photoUploadError"));
-    setPendingPhotoPaths((current) => [...current, ...uploaded]);
-    setUploading(false);
+    const path = `${bookingId}/${stage}/${key}-${Date.now()}-${file.name}`;
+    const { error: uploadError } = await supabase.storage.from("condition-reports").upload(path, file);
+    setUploadingShot("");
+    if (uploadError) { setError(t("photoUploadError")); return; }
+    // capturedAt is read at file-select time, client-side — the point
+    // is a timestamp tied to the moment the shot was taken, not to
+    // whenever the whole report eventually gets saved.
+    setShots((current) => ({ ...current, [key]: { path, capturedAt: new Date().toISOString() } }));
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!allShotsCaptured) { setError(t("conditionReportShotsRequired")); return; }
     setBusy(true);
     setError("");
     const response = await fetch(`/api/bookings/${bookingId}/condition`, {
@@ -105,7 +123,9 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
         fuelLevel: fuelLevel ? Number(fuelLevel) : undefined,
         mileage: mileage ? Number(mileage) : undefined,
         notes: notes || undefined,
-        photoPaths: pendingPhotoPaths.length > 0 ? [...(report?.photo_paths ?? []), ...pendingPhotoPaths] : undefined,
+        photoPaths: CONDITION_REPORT_SHOT_KEYS.map((key) => shots[key]?.path).filter((path): path is string => Boolean(path)),
+        shots,
+        finalize: true,
       }),
     });
     setBusy(false);
@@ -114,7 +134,6 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
       setError(result.error ?? t("conditionReportSaveError"));
       return;
     }
-    setPendingPhotoPaths([]);
     onChange();
   }
 
@@ -150,16 +169,26 @@ function StageCard({ bookingId, stage, report, selfId, onChange }: { bookingId: 
             <label>{t("mileageLabel")}<input type="number" min="0" value={mileage} onChange={(event) => setMileage(event.target.value)} /></label>
             <label className="full">{t("notesLabel")}<textarea value={notes} onChange={(event) => setNotes(event.target.value)} /></label>
           </div>
-          <label className="photo-upload-dropzone compact" aria-disabled={uploading}>
-            <Camera size={22} />
-            <strong>{uploading ? t("uploadingPhotos") : t("addPhotosLabel")}</strong>
-            <span>{t("photoUploadHint")}</span>
-            <input type="file" accept="image/*" multiple hidden disabled={uploading} onChange={handlePhotoSelect} />
-          </label>
-          {pendingPhotoPaths.length > 0 && <p className="admin-row-meta">{pendingPhotoPaths.length} {t("addPhotosLabel").toLowerCase()}</p>}
+          <div className="full">
+            <span className="select-label">{t("conditionReportShotsLabel")}</span>
+            <div className="shot-capture-grid">
+              {CONDITION_REPORT_SHOT_KEYS.map((key) => {
+                const captured = shots[key];
+                const busyHere = uploadingShot === key;
+                return (
+                  <label key={key} className={`shot-capture-slot ${captured ? "captured" : ""}`} aria-disabled={busyHere}>
+                    {captured ? <Check size={20} /> : <Camera size={20} />}
+                    <strong>{t(shotLabelKey[key])}</strong>
+                    <span>{busyHere ? t("uploadingPhotos") : captured ? t("shotCapturedLabel") : t("shotPendingLabel")}</span>
+                    <input type="file" accept="image/*" capture="environment" hidden disabled={busyHere} onChange={(event) => handleShotSelect(key, event)} />
+                  </label>
+                );
+              })}
+            </div>
+          </div>
           {error && <p className="workflow-error">{error}</p>}
           <PhotoGallery paths={report?.photo_paths ?? []} stage={stage} />
-          <button className="workflow-submit coral" type="submit" disabled={busy || uploading}><Gauge size={16} /> {t("saveReport")}</button>
+          <button className="workflow-submit coral" type="submit" disabled={busy || Boolean(uploadingShot) || !allShotsCaptured}><Gauge size={16} /> {t("saveReport")}</button>
         </form>
       ) : (
         <div className="price-breakdown">

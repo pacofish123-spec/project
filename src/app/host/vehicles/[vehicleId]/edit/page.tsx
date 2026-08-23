@@ -30,9 +30,13 @@ interface Vehicle {
   has_ac?: boolean;
   fuel_policy?: string | null;
   cleaning_policy?: string | null;
+  smoking_policy?: string | null;
   amenities?: string[] | null;
   rental_terms?: string[] | null;
   photo_paths?: string[] | null;
+  vin?: string | null;
+  vin_verified?: boolean;
+  vin_mismatches?: string[] | null;
 }
 
 export default function EditVehiclePage({ params }: { params: Promise<{ vehicleId: string }> }) {
@@ -146,13 +150,16 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
         hasAc: values.hasAc === "on",
         fuelPolicy: values.fuelPolicy,
         cleaningPolicy: values.cleaningPolicy,
+        smokingPolicy: values.smokingPolicy,
         amenities,
         rentalTerms,
+        vin: (values.vin as string)?.trim() || undefined,
       }),
     });
-    const result = await response.json() as { error?: string };
+    const result = await response.json() as { vehicle?: Vehicle; error?: string };
     setSaving(false);
     setMessage(response.ok ? t("editVehicleSaved") : result.error ?? t("hostCarsGenericError"));
+    if (response.ok && result.vehicle) setVehicle(result.vehicle);
   }
 
   return (
@@ -199,8 +206,18 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
                     <SelectField key={`currency-${countryCode}`} name="currency" label={t("currencyLabel")} defaultValue={vehicle.base_currency} options={currencyOptions.map((currency) => ({ value: currency, label: currency }))} />
                     <SelectField name="transmission" label={t("transmissionLabel")} defaultValue={vehicle.transmission ?? "automatic"} options={[{ value: "automatic", label: t("filterAutomatic") }, { value: "manual", label: "Manual" }]} />
                     <label>{t("seatsLabel")}<input name="seats" type="number" min="1" max="99" defaultValue={vehicle.seats ?? 5} required /></label>
+                    <label>{t("vinLabel")} <span className="field-hint">{t("vinHint")}</span><input name="vin" defaultValue={vehicle.vin ?? ""} placeholder="1HGCM82633A004352" maxLength={17} style={{ textTransform: "uppercase" }} /></label>
+                    {(vehicle.vin_mismatches?.length ?? 0) > 0 && (
+                      <div className="full">
+                        <p className="workflow-error">
+                          {t("vinMismatchWarning")}
+                          <br />{vehicle.vin_mismatches!.join(" ")}
+                        </p>
+                      </div>
+                    )}
                     <SelectField name="fuelPolicy" label={t("fuelPolicyLabel")} defaultValue={vehicle.fuel_policy ?? "full_to_full"} options={[{ value: "full_to_full", label: t("fuelPolicyFull") }, { value: "as_delivered", label: t("fuelPolicyAsDelivered") }]} />
                     <SelectField name="cleaningPolicy" label={t("cleaningPolicyLabel")} defaultValue={vehicle.cleaning_policy ?? "return_clean"} options={[{ value: "return_clean", label: t("cleaningPolicyReturnClean") }, { value: "return_dirty_fee", label: t("cleaningPolicyReturnDirtyFee") }]} />
+                    <SelectField name="smokingPolicy" label={t("smokingPolicyLabel")} defaultValue={vehicle.smoking_policy ?? "not_allowed"} options={[{ value: "not_allowed", label: t("smokingPolicyNotAllowed") }, { value: "cigarettes_allowed", label: t("smokingPolicyCigarettes") }, { value: "vaping_allowed", label: t("smokingPolicyVaping") }, { value: "cigarettes_and_vaping_allowed", label: t("smokingPolicyBoth") }]} />
                     <label className="full"><span><input name="hasAc" type="checkbox" defaultChecked={vehicle.has_ac} /> {t("acLabel")}</span></label>
                     <div className="full">
                       <span className="select-label">{t("amenitiesLabel")}</span>
