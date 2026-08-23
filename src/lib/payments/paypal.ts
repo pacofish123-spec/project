@@ -132,6 +132,92 @@ export async function createPaypalPayout(receiverEmail: string, amount: number, 
   return data.batch_header.payout_batch_id;
 }
 
+// --- Refundable deposit: an authorization, not a capture --------------
+// Same order-create shape as createCheckoutSession above, but
+// intent: "AUTHORIZE" instead of "CAPTURE" — PayPal reserves the funds
+// without taking them. authorizePaypalOrder below turns buyer approval
+// into an actual authorization object (PayPal's Orders v2 API requires
+// this extra step for AUTHORIZE intent, the same way Checkout Orders
+// require an explicit capture call for CAPTURE intent). PayPal holds an
+// authorization open for ~29 days by default (extendable to 175 via
+// re-authorization, not implemented here) — comfortably longer than
+// Stripe's ~7-day ceiling on the same idea.
+
+export async function createDepositAuthOrder(input: CheckoutSessionInput): Promise<CheckoutSessionResult> {
+  const token = await getAccessToken();
+  const response = await fetch(`${baseUrl()}/v2/checkout/orders`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      intent: "AUTHORIZE",
+      purchase_units: [{
+        reference_id: input.paymentRecordId,
+        custom_id: input.paymentRecordId,
+        description: input.description,
+        amount: { currency_code: input.currency.toUpperCase(), value: input.amount.toFixed(2) },
+      }],
+      application_context: {
+        return_url: input.successUrl,
+        cancel_url: input.cancelUrl,
+        user_action: "PAY_NOW",
+        brand_name: "yoRento",
+      },
+    }),
+  });
+  if (!response.ok) throw new Error(`PAYPAL_ORDER_CREATE_FAILED: ${response.status}`);
+  const order = await response.json() as { id: string; links: Array<{ rel: string; href: string }> };
+  const approveLink = order.links.find((link) => link.rel === "approve")?.href;
+  if (!approveLink) throw new Error("PAYPAL_ORDER_MISSING_APPROVE_LINK");
+  return { redirectUrl: approveLink, providerReference: order.id };
+}
+
+// Called from the deposit return route once the buyer approves —
+// returns the authorization id (distinct from the order id), which is
+// what voidPaypalAuthorization/capturePaypalAuthorization operate on.
+export async function authorizePaypalOrder(orderId: string): Promise<{ status: string; authorizationId: string | null }> {
+  const token = await getAccessToken();
+  const response = await fetch(`${baseUrl()}/v2/checkout/orders/${orderId}/authorize`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+  });
+  const data = await response.json() as {
+    status: string;
+    purchase_units?: Array<{ payments?: { authorizations?: Array<{ id: string }> } }>;
+  };
+  if (!response.ok) throw new Error(`PAYPAL_AUTHORIZE_FAILED: ${response.status}`);
+  const authorizationId = data.purchase_units?.[0]?.payments?.authorizations?.[0]?.id ?? null;
+  return { status: data.status, authorizationId };
+}
+
+// Releases the hold entirely — the renter is never charged. Called
+// from the same acknowledge-a-clean-return-stage-report trigger as
+// Stripe's releaseDepositHold.
+export async function voidPaypalAuthorization(authorizationId: string): Promise<void> {
+  const token = await getAccessToken();
+  const response = await fetch(`${baseUrl()}/v2/payments/authorizations/${authorizationId}/void`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error(`PAYPAL_VOID_FAILED: ${response.status}`);
+}
+
+// Captures some or all of the authorized amount — a damage claim.
+// Admin-only in this codebase, same rule as Stripe's captureDepositHold.
+export async function capturePaypalAuthorization(authorizationId: string, amount?: number, currency?: string): Promise<string> {
+  const token = await getAccessToken();
+  const body = amount !== undefined && currency
+    ? { amount: { value: amount.toFixed(2), currency_code: currency.toUpperCase() }, final_capture: true }
+    : { final_capture: true };
+  const response = await fetch(`${baseUrl()}/v2/payments/authorizations/${authorizationId}/capture`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(`PAYPAL_CAPTURE_AUTH_FAILED: ${response.status}`);
+  const data = await response.json() as { id: string };
+  return data.id;
+}
+
 // Verifies a webhook actually came from PayPal (not spoofed) — PayPal
 // doesn't sign with a shared secret like Stripe; instead you hand the
 // full envelope + headers back to their own verification endpoint.

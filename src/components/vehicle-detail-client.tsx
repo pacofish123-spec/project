@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CarFront, MapPin, Sparkles, ShieldCheck } from "lucide-react";
+import { ArrowLeft, BadgeCheck, CarFront, MapPin, Smartphone, Sparkles, ShieldCheck } from "lucide-react";
 import { BookingForm, type BookingExtraOption } from "@/components/booking-form";
 import { PhotoLightbox } from "@/components/photo-lightbox";
 import { HostProfileCard, type HostSummary } from "@/components/host-profile-card";
 import { useLanguage } from "@/lib/i18n";
+import type { TranslationKey } from "@/lib/translations";
 import { formatMoney } from "@/lib/format";
 import { vehiclePhotoUrl } from "@/lib/storage-url";
 import { vehicleAmenities } from "@/lib/vehicle-amenities";
@@ -31,8 +32,12 @@ export interface Vehicle {
   status: string;
   promoted?: boolean;
   verified?: boolean;
+  host_identity_verified?: boolean;
+  vin_verified?: boolean;
+  phone_verified?: boolean;
   fuel_policy?: string | null;
   cleaning_policy?: string | null;
+  smoking_policy?: string | null;
   amenities?: string[] | null;
   photo_paths?: string[] | null;
 }
@@ -46,6 +51,9 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
   const { t } = useLanguage();
   const [vehicle] = useState<Vehicle>(initialVehicle);
   const [extras, setExtras] = useState<BookingExtraOption[]>([]);
+  // Off until the real Casa del Conductor membership deal closes (see
+  // platform_settings, migration 0043) — never claim it before then.
+  const [cdcEnabled, setCdcEnabled] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const photos = (vehicle.photo_paths ?? []).map((path) => vehiclePhotoUrl(path));
   const vehicleLabel = `${vehicle.make} ${vehicle.model}`;
@@ -53,6 +61,13 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
   const cleaningPolicyLabel = vehicle.cleaning_policy === "return_clean" ? t("cleaningPolicyReturnClean")
     : vehicle.cleaning_policy === "return_dirty_fee" ? t("cleaningPolicyReturnDirtyFee")
     : vehicle.cleaning_policy;
+  const smokingPolicyLabelMap: Record<string, TranslationKey> = {
+    not_allowed: "smokingPolicyNotAllowed",
+    cigarettes_allowed: "smokingPolicyCigarettes",
+    vaping_allowed: "smokingPolicyVaping",
+    cigarettes_and_vaping_allowed: "smokingPolicyBoth",
+  };
+  const smokingPolicyLabel = vehicle.smoking_policy ? t(smokingPolicyLabelMap[vehicle.smoking_policy] ?? "smokingPolicyNotAllowed") : null;
 
   // A quick-glance spec sheet generated straight from what the host
   // already entered — no separate field to fill in, no risk of it
@@ -69,6 +84,10 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
     fetch(`/api/vehicles/${vehicleId}/extras`).then(async (response) => {
       const result = await response.json() as { extras?: BookingExtraOption[] };
       if (response.ok) setExtras(result.extras ?? []);
+    }).catch(() => {});
+    fetch("/api/platform-settings").then(async (response) => {
+      const result = await response.json() as { settings?: { cdc_membership_enabled?: boolean } };
+      if (response.ok) setCdcEnabled(Boolean(result.settings?.cdc_membership_enabled));
     }).catch(() => {});
   }, [vehicleId]);
 
@@ -88,7 +107,9 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
             >
               {!photos[0] && <CarFront size={56} />}
               <div className="vehicle-card-badges">
-                {vehicle.verified && <span className="verified-badge verified-status-badge" title={t("verifiedBadgeExplainer")}><ShieldCheck size={13} /> {t("verificationVerified")}</span>}
+                {vehicle.host_identity_verified && <span className="verified-badge id-verified-badge" title={t("idVerifiedBadgeExplainer")}><BadgeCheck size={13} /> {t("idVerifiedBadge")}</span>}
+                {vehicle.vin_verified && <span className="verified-badge verified-status-badge" title={t("specsVerifiedBadgeExplainer")}><ShieldCheck size={13} /> {t("specsVerifiedBadge")}</span>}
+                {vehicle.phone_verified && <span className="verified-badge phone-verified-badge" title={t("phoneVerifiedBadgeExplainer")}><Smartphone size={13} /> {t("phoneVerifiedBadge")}</span>}
                 {vehicle.promoted && <span className="verified-badge promoted-badge"><Sparkles size={13} /> {t("promotedBadge")}</span>}
               </div>
             </button>
@@ -111,12 +132,13 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
               </div>
             )}
 
-            {(vehicle.fuel_policy || cleaningPolicyLabel) && (
+            {(vehicle.fuel_policy || cleaningPolicyLabel || smokingPolicyLabel) && (
               <div className="vehicle-included-card">
                 <p className="workflow-kicker">{t("whatsIncludedLabel")}</p>
                 <div className="admin-reasons">
                   {vehicle.fuel_policy && <span>{t("fuelPolicyLabel")}: {vehicle.fuel_policy === "as_delivered" ? t("fuelPolicyAsDelivered") : t("fuelPolicyFull")}</span>}
                   {cleaningPolicyLabel && <span>{t("cleaningPolicyLabel")}: {cleaningPolicyLabel}</span>}
+                  {smokingPolicyLabel && <span>{t("smokingPolicyLabel")}: {smokingPolicyLabel}</span>}
                 </div>
               </div>
             )}
@@ -141,10 +163,11 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
           <div className="vehicle-detail-body">
             <HostProfileCard host={host} hostTypeLabel={vehicle.host_type === "individual" ? t("vehiclePersonalOwner") : t("vehicleBusinessLabel")} />
             <h1>{vehicle.make} {vehicle.model}</h1>
-            {vehicle.verified && <p className="vehicle-detail-trust"><ShieldCheck size={16} /> {t("verifiedBadgeExplainer")}</p>}
+            {vehicle.vin_verified && <p className="vehicle-detail-trust"><ShieldCheck size={16} /> {t("specsVerifiedBadgeExplainer")}</p>}
             <p className="vehicle-detail-meta"><MapPin size={15} /> {vehicle.location_city}, {vehicle.country_code} <span>&middot;</span> {vehicle.year}</p>
             <p className="vehicle-detail-price"><strong>{formatMoney(vehicle.daily_price, vehicle.base_currency)}</strong> {t("perDaySuffix")}</p>
             <div className="vehicle-detail-trust"><ShieldCheck size={16} /> {t("vehiclePricingNote")}</div>
+            {cdcEnabled && <div className="vehicle-detail-trust cdc-trust-line"><ShieldCheck size={16} /> {t("cdcBadgeExplainer")}</div>}
             <BookingForm vehicleId={vehicle.id} status={vehicle.status} extras={extras} countryCode={vehicle.country_code} />
           </div>
         </section>

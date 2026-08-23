@@ -131,6 +131,18 @@ function NewVehicleForm() {
     }).catch(() => setIdentityVerified(false));
   }, [signedIn]);
 
+  // Same pattern, for the profile-photo gate (migration 0040) — real
+  // enforcement is server-side (POST /api/vehicles + the vehicles
+  // insert RLS policy).
+  const [hasProfilePhoto, setHasProfilePhoto] = useState<boolean | undefined>(undefined);
+  useEffect(() => {
+    if (!signedIn) return;
+    fetch("/api/profile/me").then(async (response) => {
+      const result = await response.json() as { avatar_url?: string | null };
+      setHasProfilePhoto(response.ok && Boolean(result.avatar_url));
+    }).catch(() => setHasProfilePhoto(false));
+  }, [signedIn]);
+
   const [createdVehicleId, setCreatedVehicleId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -206,10 +218,12 @@ function NewVehicleForm() {
         hasAc: values.hasAc === "on",
         fuelPolicy: values.fuelPolicy,
         cleaningPolicy: values.cleaningPolicy || undefined,
+        smokingPolicy: values.smokingPolicy,
         amenities,
         rentalTerms,
         latitude: coords?.latitude,
         longitude: coords?.longitude,
+        vin: (values.vin as string)?.trim() || undefined,
       }),
     });
     const result = await response.json() as { vehicle?: { id: string }; error?: string };
@@ -231,6 +245,23 @@ function NewVehicleForm() {
             <section className="workflow-card">
               <div className="dashboard-message"><ShieldCheck size={23} /><p>{t("hostCarsSignInRequiredBody")}</p></div>
               <Link className="workflow-submit coral" href="/sign-in"><ArrowRight size={16} />{t("signIn")}</Link>
+            </section>
+          </div>
+        </main>
+      </>
+    );
+  }
+
+  if (signedIn === true && hasProfilePhoto === false) {
+    return (
+      <>
+        <AppHeader />
+        <main className="workflow-page">
+          <div className="page-width">
+            <div className="workflow-nav"><Link className="workflow-back" href="/host"><ArrowLeft size={16} /> {t("backLinkHostSetup")}</Link></div>
+            <section className="workflow-card">
+              <div className="dashboard-message"><ShieldCheck size={23} /><p>{t("hostCarsPhotoRequiredBody")}</p></div>
+              <Link className="workflow-submit coral" href="/profile?photoRequired=1"><ArrowRight size={16} />{t("hostCarsPhotoRequiredAction")}</Link>
             </section>
           </div>
         </main>
@@ -284,8 +315,10 @@ function NewVehicleForm() {
               <SelectField key={countryCode} name="currency" label={t("currencyLabel")} defaultValue={currencyOptions[0]} options={currencyOptions.map((currency) => ({ value: currency, label: currency }))} />
               <SelectField name="transmission" label={t("transmissionLabel")} defaultValue="automatic" options={[{ value: "automatic", label: t("filterAutomatic") }, { value: "manual", label: "Manual" }]} />
               <label>{t("seatsLabel")}<input name="seats" type="number" min="1" max="99" defaultValue="5" required /></label>
+              <label>{t("vinLabel")} <span className="field-hint">{t("vinHint")}</span><input name="vin" placeholder="1HGCM82633A004352" maxLength={17} style={{ textTransform: "uppercase" }} /></label>
               <SelectField name="fuelPolicy" label={t("fuelPolicyLabel")} defaultValue="full_to_full" options={[{ value: "full_to_full", label: t("fuelPolicyFull") }, { value: "as_delivered", label: t("fuelPolicyAsDelivered") }]} />
               <SelectField name="cleaningPolicy" label={t("cleaningPolicyLabel")} defaultValue="return_clean" options={[{ value: "return_clean", label: t("cleaningPolicyReturnClean") }, { value: "return_dirty_fee", label: t("cleaningPolicyReturnDirtyFee") }]} />
+              <SelectField name="smokingPolicy" label={t("smokingPolicyLabel")} defaultValue="not_allowed" options={[{ value: "not_allowed", label: t("smokingPolicyNotAllowed") }, { value: "cigarettes_allowed", label: t("smokingPolicyCigarettes") }, { value: "vaping_allowed", label: t("smokingPolicyVaping") }, { value: "cigarettes_and_vaping_allowed", label: t("smokingPolicyBoth") }]} />
               <label className="full"><span><input name="hasAc" type="checkbox" /> {t("acLabel")}</span></label>
               <div className="full">
                 <span className="select-label">{t("amenitiesLabel")}</span>

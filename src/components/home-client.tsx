@@ -7,6 +7,7 @@ import { SearchPanel } from "@/components/search-panel";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { AuthMenu } from "@/components/auth-menu";
 import { VehicleCard, type VehicleCardData } from "@/components/vehicle-card";
+import { PublicReviews, type PublicReview } from "@/components/public-reviews";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { LanguageDropdown } from "@/components/language-dropdown";
 import { NotificationBell } from "@/components/notification-bell";
@@ -35,7 +36,7 @@ import {
 // engines and the first paint get real listing content instead of an
 // empty grid waiting on a client fetch. Everything else here (menu,
 // filters, auth state, language) is genuinely client-only interaction.
-export function HomeClient({ initialVehicles, activeCities }: { initialVehicles: VehicleCardData[]; activeCities: string[] }) {
+export function HomeClient({ initialVehicles, activeCities, reviews }: { initialVehicles: VehicleCardData[]; activeCities: string[]; reviews: PublicReview[] }) {
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const [hostFilter, setHostFilter] = useState("All vehicles");
@@ -123,6 +124,8 @@ export function HomeClient({ initialVehicles, activeCities }: { initialVehicles:
       </section>
 
       <section className="trust-strip" id="trust"><div className="page-width trust-grid"><div><ShieldCheck size={25} /><h3>{t("trustBuiltInTitle")}</h3><p>{t("trustBuiltInBody")}</p></div><div><Sparkles size={25} /><h3>{t("madeForJourneyTitle")}</h3><p>{t("madeForJourneyBody")}</p></div><div><Globe2 size={25} /><h3>{t("oneAccountTitle")}</h3><p>{t("oneAccountBody")}</p></div></div></section>
+
+      <PublicReviews reviews={reviews} />
 
       {destinations.length > 0 && <section className="section page-width" id="destinations"><div className="section-heading"><div><p className="eyebrow muted">{t("startSomewhereBeautiful")}</p><h2>{t("whereWillYouGoLine1")} <em>{t("whereWillYouGoLine2")}</em></h2></div><Link className="text-link" href="/destinations">{t("exploreDestinations")} <ArrowRight size={16} /></Link></div><div className="destination-grid">{destinations.map((destination) => <Link className="destination-card" href={`/destinations/${slugifyDestination(destination.name)}`} key={destination.name} style={{ backgroundImage: `url(${destination.image})` }}><div><strong>{destination.name}</strong><span>{destination.detail}</span></div><ArrowRight size={18} /></Link>)}</div></section>}
 

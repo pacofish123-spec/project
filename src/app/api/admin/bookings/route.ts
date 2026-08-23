@@ -11,10 +11,19 @@ export async function GET() {
       .limit(200);
     if (error) return NextResponse.json({ error: "Unable to load bookings." }, { status: 500 });
 
+    // The real `profiles` table, not the public_profiles view — an
+    // admin already has full-row SELECT via is_platform_admin() (0004),
+    // and date_of_birth is exactly the kind of field a support agent
+    // needs to look a booking up by, which the public view deliberately
+    // excludes.
     const renterIds = [...new Set((data ?? []).map((booking) => booking.renter_user_id))];
-    const { data: renters } = renterIds.length ? await supabase.from("public_profiles").select("id, display_name").in("id", renterIds) : { data: [] };
-    const renterNames = new Map((renters ?? []).map((profile) => [profile.id, profile.display_name]));
-    const bookings = (data ?? []).map((booking) => ({ ...booking, renter_display_name: renterNames.get(booking.renter_user_id) ?? "—" }));
+    const { data: renters } = renterIds.length ? await supabase.from("profiles").select("id, display_name, date_of_birth").in("id", renterIds) : { data: [] };
+    const renterById = new Map((renters ?? []).map((profile) => [profile.id, profile]));
+    const bookings = (data ?? []).map((booking) => ({
+      ...booking,
+      renter_display_name: renterById.get(booking.renter_user_id)?.display_name ?? "—",
+      renter_date_of_birth: renterById.get(booking.renter_user_id)?.date_of_birth ?? null,
+    }));
 
     return NextResponse.json({ bookings });
   } catch (error) {

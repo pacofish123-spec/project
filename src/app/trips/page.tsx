@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowLeft, ArrowRight, CalendarDays, CarFront, CheckCirc
 import { AppHeader } from "@/components/app-header";
 import { SkeletonCards } from "@/components/skeleton";
 import { PublicProfilePopover } from "@/components/public-profile-popover";
+import { ReviewPrompt } from "@/components/review-prompt";
 import { PaymentProviderButton } from "@/components/payment-provider-button";
 import { formatDate, formatMoney } from "@/lib/format";
 import { useLanguage, localeByLanguage } from "@/lib/i18n";
@@ -22,7 +23,7 @@ interface RenterBooking {
   total: number;
   currency: string;
   vehicles?: { make: string; model: string; year: number; location_city: string; host_type: string; photo_paths?: string[] | null } | null;
-  payment_records?: Array<{ status: string; kind: string; provider: string }> | null;
+  payment_records?: Array<{ status: string; kind: string; provider: string; amount: number; currency: string }> | null;
 }
 
 interface HostBooking {
@@ -84,6 +85,17 @@ export default function TripsPage() {
   const [paymentBanner, setPaymentBanner] = useState<"success" | "failed" | "">("");
   const [payError, setPayError] = useState("");
 
+  // Deposit/waiver — the optional $300 refundable hold vs. the
+  // (admin-gated, off by default) damage-waiver fee. depositChoiceId
+  // tracks which booking card has the chooser open; depositMethod
+  // tracks which of the two a renter picked, within that same card, so
+  // the provider buttons underneath route to the right endpoint.
+  const [depositChoiceId, setDepositChoiceId] = useState("");
+  const [depositMethod, setDepositMethod] = useState<"deposit" | "waiver" | "">("");
+  const [depositBusyId, setDepositBusyId] = useState("");
+  const [depositError, setDepositError] = useState("");
+  const [waiverSettings, setWaiverSettings] = useState<{ enabled: boolean; dailyRate: number | null; currency: string }>({ enabled: false, dailyRate: null, currency: "USD" });
+
   // "Cars booked from me" — only shown at all once we know the account
   // owns at least one vehicle; a pure renter never sees an empty host
   // section.
@@ -95,6 +107,12 @@ export default function TripsPage() {
     fetch("/api/payments/providers").then(async (response) => {
       const result = await response.json() as { providers?: PaymentProviderOption[] };
       if (response.ok) setPayProviders(result.providers ?? []);
+    }).catch(() => {});
+    fetch("/api/platform-settings").then(async (response) => {
+      const result = await response.json() as { settings?: { insurance_waiver_enabled: boolean; insurance_waiver_daily_rate: number | null; insurance_waiver_currency: string } };
+      if (response.ok && result.settings) {
+        setWaiverSettings({ enabled: result.settings.insurance_waiver_enabled, dailyRate: result.settings.insurance_waiver_daily_rate, currency: result.settings.insurance_waiver_currency });
+      }
     }).catch(() => {});
     // Deferred a tick (matches the same pattern admin/analytics uses)
     // so this isn't a bare synchronous setState in the effect body —
@@ -155,6 +173,17 @@ export default function TripsPage() {
     setPayingId("");
   }
 
+  async function startDeposit(id: string, method: "deposit" | "waiver", provider: string) {
+    setDepositBusyId(id);
+    setDepositError("");
+    const endpoint = method === "deposit" ? `/api/bookings/${id}/deposit` : `/api/bookings/${id}/waiver`;
+    const response = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ provider }) });
+    const result = await response.json().catch(() => ({})) as { redirectUrl?: string; error?: string };
+    if (response.ok && result.redirectUrl) { window.location.assign(result.redirectUrl); return; }
+    setDepositError(result.error ?? t("paymentStartError"));
+    setDepositBusyId("");
+  }
+
   async function submitDispute(id: string) {
     if (!disputeReason.trim()) return;
     setDisputeBusy(true);
@@ -204,6 +233,10 @@ export default function TripsPage() {
                   {bookings.map((booking) => {
                     const isPaid = (booking.payment_records ?? []).some((record) => record.kind === "charge" && record.status === "paid");
                     const canPay = booking.status === "accepted" && !isPaid && payProviders.length > 0;
+                    const depositProviders = payProviders.filter((provider) => provider.id === "stripe" || provider.id === "paypal");
+                    const depositRecord = (booking.payment_records ?? []).find((record) => record.kind === "deposit_hold");
+                    const waiverRecord = (booking.payment_records ?? []).find((record) => record.kind === "insurance_waiver");
+                    const canChooseDeposit = (booking.status === "accepted" || booking.status === "in_progress") && !depositRecord && !waiverRecord && depositProviders.length > 0;
                     return (
                     <article className="trip-card" key={booking.id}>
                       <div className="trip-card-head">
@@ -239,6 +272,52 @@ export default function TripsPage() {
                           </div>
                         )
                       )}
+                      {depositRecord && (
+                        <p className="admin-row-meta">
+                          {depositRecord.status === "authorized" && t("depositHeldStatus", { amount: formatMoney(depositRecord.amount, depositRecord.currency) })}
+                          {depositRecord.status === "refunded" && t("depositReleasedStatus")}
+                          {depositRecord.status === "paid" && t("depositCapturedStatus")}
+                          {depositRecord.status === "pending" && t("depositPendingStatus")}
+                        </p>
+                      )}
+                      {waiverRecord && waiverRecord.status === "paid" && <p className="admin-row-meta">{t("waiverPaidStatus", { amount: formatMoney(waiverRecord.amount, waiverRecord.currency) })}</p>}
+                      {depositError && <p className="workflow-error">{depositError}</p>}
+                      {canChooseDeposit && (
+                        <div className="pay-now-row deposit-choice-row">
+                          {depositChoiceId !== booking.id ? (
+                            <button className="workflow-link" type="button" onClick={() => { setDepositChoiceId(booking.id); setDepositMethod(""); }}>
+                              {t("depositChooseAction")}
+                            </button>
+                          ) : !depositMethod ? (
+                            <div className="choice-grid deposit-choice-grid">
+                              <button type="button" className="choice-card" onClick={() => setDepositMethod("deposit")}>
+                                <strong>{t("depositOptionDepositTitle")}</strong>
+                                <span>{t("depositOptionDepositBody")}</span>
+                              </button>
+                              {waiverSettings.enabled && waiverSettings.dailyRate !== null && (
+                                <button type="button" className="choice-card" onClick={() => setDepositMethod("waiver")}>
+                                  <strong>{t("depositOptionWaiverTitle")}</strong>
+                                  <span>{t("depositOptionWaiverBody", { rate: formatMoney(waiverSettings.dailyRate, waiverSettings.currency) })}</span>
+                                </button>
+                              )}
+                              <button className="workflow-link" type="button" onClick={() => setDepositChoiceId("")}>{t("cancel")}</button>
+                            </div>
+                          ) : (
+                            <>
+                              {depositProviders.map((provider) => (
+                                <PaymentProviderButton
+                                  key={provider.id}
+                                  provider={provider}
+                                  busy={depositBusyId === booking.id}
+                                  label={depositBusyId === booking.id ? t("paymentStarting") : (provider.id === "stripe" ? t("payWithCardLabel") : provider.label)}
+                                  onClick={() => startDeposit(booking.id, depositMethod, provider.id)}
+                                />
+                              ))}
+                              <button className="workflow-link" type="button" onClick={() => setDepositMethod("")}>{t("cancel")}</button>
+                            </>
+                          )}
+                        </div>
+                      )}
                       <div className="trip-footer">
                         <strong>{formatMoney(booking.total, booking.currency)}</strong>
                         <div className="trip-actions">
@@ -267,6 +346,7 @@ export default function TripsPage() {
                           <button className="workflow-submit coral" type="button" disabled={disputeBusy || !disputeReason.trim()} onClick={() => submitDispute(booking.id)}>{t("submitDispute")}</button>
                         </div>
                       )}
+                      {booking.status === "completed" && <ReviewPrompt bookingId={booking.id} />}
                     </article>
                     );
                   })}
@@ -316,6 +396,7 @@ export default function TripsPage() {
                           )}
                         </div>
                       </div>
+                      {booking.status === "completed" && <ReviewPrompt bookingId={booking.id} />}
                     </article>
                     );
                   })}

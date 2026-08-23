@@ -31,8 +31,14 @@ export async function POST(request: Request) {
     case "checkout.session.completed": {
       const session = event.data.object as Stripe.Checkout.Session;
       if (!session.client_reference_id) break;
+      // A deposit_hold record settles into 'authorized' (the card is
+      // only reserved, never charged) — everything else (the rental
+      // charge, the damage-waiver fee) settles into 'paid' as before.
+      // The PaymentIntent id (not the session id) is what release/
+      // capture operate on either way, so it's always what gets stored.
+      const { data: record } = await admin.from("payment_records").select("kind").eq("id", session.client_reference_id).maybeSingle();
       await admin.from("payment_records").update({
-        status: "paid",
+        status: record?.kind === "deposit_hold" ? "authorized" : "paid",
         processor_reference: typeof session.payment_intent === "string" ? session.payment_intent : session.id,
         metadata: { stripeSessionId: session.id },
         updated_at: new Date().toISOString(),

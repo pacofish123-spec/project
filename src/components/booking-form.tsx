@@ -68,6 +68,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
   }
   const [message, setMessage] = useState("");
   const [identityBlocked, setIdentityBlocked] = useState(false);
+  const [photoBlocked, setPhotoBlocked] = useState(false);
   const [restoredNotice, setRestoredNotice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [quote, setQuote] = useState<Quote | null>(null);
@@ -82,6 +83,10 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
   // this just avoids sending a renter through the whole form only to
   // be rejected at the very end.
   const [identityVerified, setIdentityVerified] = useState<boolean | undefined>(undefined);
+  // Same idea as identityVerified above, for the profile-photo gate
+  // (migration 0040) — checked client-side just to avoid a wasted trip
+  // through the form; create_booking() is the real boundary.
+  const [hasProfilePhoto, setHasProfilePhoto] = useState<boolean | undefined>(undefined);
 
   const startsAt = startDate ? `${startDate}T${startTime || "00:00"}` : "";
   const endsAt = endDate ? `${endDate}T${endTime || "00:00"}` : "";
@@ -107,6 +112,10 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
       const result = await response.json() as { verification?: { status: string } | null };
       setIdentityVerified(response.ok && result.verification?.status === "verified");
     }).catch(() => setIdentityVerified(false));
+    fetch("/api/profile/me").then(async (response) => {
+      const result = await response.json() as { avatar_url?: string | null };
+      setHasProfilePhoto(response.ok && Boolean(result.avatar_url));
+    }).catch(() => setHasProfilePhoto(false));
   }, [signedIn]);
 
   // Restores whatever was mid-booking before a guest went off to sign
@@ -189,6 +198,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     setBusy(true);
     setMessage("");
     setIdentityBlocked(false);
+    setPhotoBlocked(false);
     const response = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -198,6 +208,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     if (!response.ok || !result.booking) {
       setBusy(false);
       if (result.code === "IDENTITY_VERIFICATION_REQUIRED") { setIdentityBlocked(true); setMessage(t("bookingIdentityRequiredError")); return; }
+      if (result.code === "PROFILE_PHOTO_REQUIRED") { setPhotoBlocked(true); setMessage(t("bookingPhotoRequiredError")); return; }
       setMessage(result.error ?? t("bookingGenericError"));
       return;
     }
@@ -220,6 +231,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     event.preventDefault();
     setMessage("");
     setIdentityBlocked(false);
+    setPhotoBlocked(false);
     if (!startDate || !endDate || !pickupLocation || !returnLocation) {
       setMessage(t("bookingChooseDatesError"));
       return;
@@ -234,6 +246,11 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     if (signedIn === false) {
       saveDraft();
       setShowSignIn(true);
+      return;
+    }
+    if (hasProfilePhoto === false) {
+      setPhotoBlocked(true);
+      setMessage(t("bookingPhotoRequiredError"));
       return;
     }
     if (identityVerified === false) {
@@ -299,6 +316,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
         <p className="workflow-error">
           {message}
           {identityBlocked && <> <Link className="workflow-link" href="/verify-id">{t("bookingIdentityRequiredLink")}</Link></>}
+          {photoBlocked && <> <Link className="workflow-link" href="/profile?photoRequired=1">{t("bookingPhotoRequiredLink")}</Link></>}
         </p>
       )}
       <button className="workflow-submit coral" disabled={busy} type="submit"><CalendarDays size={17} />{busy ? t("bookingSubmitBusy") : t("bookingSubmit")}</button>
