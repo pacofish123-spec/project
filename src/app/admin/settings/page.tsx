@@ -77,9 +77,9 @@ export default function AdminSettingsPage() {
           />
           Enabled — show the waiver option to renters
         </label>
-        <div className="field-grid">
-          <label>
-            Daily rate
+        <label className="rate-currency-label">
+          Daily rate
+          <div className="rate-currency-row">
             <input
               type="number"
               min={0}
@@ -88,17 +88,16 @@ export default function AdminSettingsPage() {
               onChange={(event) => setSettings({ ...settings, insurance_waiver_daily_rate: event.target.value === "" ? null : Number(event.target.value) })}
               placeholder="e.g. 8.00"
             />
-          </label>
-          <label>
-            Currency
             <input
               type="text"
+              className="currency-code-input"
               value={settings.insurance_waiver_currency}
               maxLength={3}
+              aria-label="Currency"
               onChange={(event) => setSettings({ ...settings, insurance_waiver_currency: event.target.value.toUpperCase() })}
             />
-          </label>
-        </div>
+          </div>
+        </label>
       </div>
 
       <div className="admin-settings-block">
