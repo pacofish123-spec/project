@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Camera, Save } from "lucide-react";
 import { ChangeEvent, FormEvent, use, useEffect, useState } from "react";
@@ -181,7 +182,7 @@ export default function EditVehiclePage({ params }: { params: Promise<{ vehicleI
                 <div className="condition-photo-grid">
                   {photoPaths.map((path) => (
                     <div key={path} style={{ position: "relative" }}>
-                      <a href={vehiclePhotoUrl(path)} target="_blank" rel="noreferrer"><img src={vehiclePhotoUrl(path)} alt={`${vehicle.make} ${vehicle.model}`} /></a>
+                      <a href={vehiclePhotoUrl(path)} target="_blank" rel="noreferrer"><Image src={vehiclePhotoUrl(path)} alt={`${vehicle.make} ${vehicle.model}`} fill sizes="120px" style={{ objectFit: "cover" }} /></a>
                       <button type="button" className="save-button saved" style={{ width: 26, height: 26 }} aria-label={t("removePhotoAction")} onClick={() => removePhoto(path)}>&times;</button>
                     </div>
                   ))}

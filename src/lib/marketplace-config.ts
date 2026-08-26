@@ -1,5 +1,12 @@
 import type { CountryConfig } from "./domain";
 
+// TODO(launch): swap for the real support inbox before going live —
+// shown in the site footer and on the legal pages as the contact
+// method for privacy/data requests. RESEND_FROM_EMAIL isn't set yet
+// either (src/lib/email/resend.ts falls back to Resend's shared
+// onboarding@resend.dev), so there's no domain email on file to reuse.
+export const supportEmail = "support@yorento.com";
+
 export const supportedLanguages = ["es", "en", "fr"] as const;
 export type SupportedLanguage = (typeof supportedLanguages)[number];
 

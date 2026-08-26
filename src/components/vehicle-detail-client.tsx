@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, BadgeCheck, CarFront, MapPin, Smartphone, Sparkles, ShieldCheck } from "lucide-react";
 import { BookingForm, type BookingExtraOption } from "@/components/booking-form";
@@ -100,11 +101,12 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
             <button
               type="button"
               className="vehicle-detail-media"
-              style={photos[0] ? { backgroundImage: `url(${photos[0]})`, cursor: "zoom-in" } : undefined}
+              style={photos[0] ? { cursor: "zoom-in" } : undefined}
               disabled={photos.length === 0}
               aria-label={photos.length > 0 ? `View ${vehicleLabel} photos` : undefined}
               onClick={() => photos.length > 0 && setLightboxIndex(0)}
             >
+              {photos[0] && <Image src={photos[0]} alt={vehicleLabel} fill sizes="(max-width: 760px) 100vw, 60vw" priority style={{ objectFit: "cover" }} />}
               {!photos[0] && <CarFront size={56} />}
               <div className="vehicle-card-badges">
                 {vehicle.host_identity_verified && <span className="verified-badge id-verified-badge" title={t("idVerifiedBadgeExplainer")}><BadgeCheck size={13} /> {t("idVerifiedBadge")}</span>}
@@ -118,7 +120,7 @@ export function VehicleDetailClient({ vehicleId, initialVehicle, host }: { vehic
               <div className="vehicle-detail-thumbs">
                 {photos.slice(1).map((url, index) => (
                   <button type="button" key={url} onClick={() => setLightboxIndex(index + 1)} aria-label={`View ${vehicleLabel} photo ${index + 2}`}>
-                    <img src={url} alt={`${vehicleLabel} photo ${index + 2}`} />
+                    <Image src={url} alt={`${vehicleLabel} photo ${index + 2}`} fill sizes="120px" style={{ objectFit: "cover" }} />
                   </button>
                 ))}
               </div>

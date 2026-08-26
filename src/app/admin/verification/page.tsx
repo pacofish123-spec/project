@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -64,7 +65,7 @@ function VehicleBreakdown({ vehicle }: { vehicle: VerificationVehicle }) {
     <div className="admin-vehicle-breakdown">
       {photos.length > 0 ? (
         <div className="condition-photo-grid">
-          {photos.map((path, index) => <a href={vehiclePhotoUrl(path)} target="_blank" rel="noreferrer" key={path}><img src={vehiclePhotoUrl(path)} alt={`${vehicle.make} ${vehicle.model} photo ${index + 1}`} /></a>)}
+          {photos.map((path, index) => <a href={vehiclePhotoUrl(path)} target="_blank" rel="noreferrer" key={path}><Image src={vehiclePhotoUrl(path)} alt={`${vehicle.make} ${vehicle.model} photo ${index + 1}`} fill sizes="120px" style={{ objectFit: "cover" }} /></a>)}
         </div>
       ) : (
         <p className="admin-row-meta">No photos uploaded yet.</p>

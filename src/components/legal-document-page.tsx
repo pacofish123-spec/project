@@ -38,6 +38,7 @@ export function LegalDocumentPage({ document, backLabel }: { document: LegalDocu
                     {section.body.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
                   </div>
                 ))}
+                <p className="legal-note">Questions about this document? <Link href="/contact">Contact us</Link>.</p>
               </>
             )}
           </section>

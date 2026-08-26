@@ -21,7 +21,7 @@ html.dark .workflow-intro, html.dark .workflow-form label, html.dark .workflow-c
 .field-hint { color: #89958d; font-size: 10px; font-weight: 400; }
 .select-field { position: relative; display: grid; gap: 8px; }.select-label { color: var(--ink); font-size: 12px; font-weight: 700; }.select-trigger { display: flex; align-items: center; justify-content: space-between; min-height: 48px; padding: 0 13px; border: 1px solid #d4dfd6; border-radius: 4px; background: transparent; color: var(--ink); font: inherit; text-align: left; }.select-trigger:focus-visible, .select-option:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }.select-menu { position: absolute; right: 0; bottom: -4px; left: 0; z-index: 5; display: grid; gap: 2px; max-height: min(280px, 50vh); padding: 6px; overflow-y: auto; transform: translateY(100%); border: 1px solid #d4dfd6; border-radius: 5px; background: var(--paper); box-shadow: 0 12px 30px rgba(24,59,50,.15); overscroll-behavior: contain; }.select-option { display: flex; align-items: center; justify-content: space-between; min-height: 44px; padding: 0 10px; border: 0; border-radius: 3px; background: transparent; color: var(--ink); text-align: left; }.select-option:hover, .select-option[aria-selected="true"] { background: #eaf2eb; }.route-stage { min-height: 100%; }.icon-button, .save-button, .profile-button, .menu-button { min-width: 44px; min-height: 44px; }
 .photo-lightbox { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(6, 16, 13, .92); cursor: zoom-out; }
-.photo-lightbox img { max-width: min(92vw, 1100px); max-height: 86vh; object-fit: contain; border-radius: 4px; cursor: default; }
+.photo-lightbox-frame { position: relative; width: min(92vw, 1100px); height: 86vh; border-radius: 4px; cursor: default; }
 .photo-lightbox-close { position: absolute; top: 18px; right: 18px; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; background: rgba(255,255,255,.08); color: #fff; }
 .photo-lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid rgba(255,255,255,.3); border-radius: 50%; background: rgba(255,255,255,.08); color: #fff; }
 .photo-lightbox-nav.prev { left: 18px; }
@@ -75,7 +75,7 @@ html.dark .location-autocomplete-panel { border-color: #385047; }
 html.dark .location-autocomplete-group button:hover { background: #243b32; }
 .vehicle-detail-left { display: flex; flex-direction: column; gap: 16px; }
 .vehicle-detail-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; }
-.vehicle-detail-thumbs button { display: block; aspect-ratio: 1; overflow: hidden; padding: 0; border: 1px solid #d4dfd6; border-radius: 6px; background: none; }
+.vehicle-detail-thumbs button { position: relative; display: block; aspect-ratio: 1; overflow: hidden; padding: 0; border: 1px solid #d4dfd6; border-radius: 6px; background: none; }
 .vehicle-detail-thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .vehicle-feature-icons { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; border: 1px solid #d4dfd6; border-radius: 8px; background: var(--paper); }
 .vehicle-feature-icons span { display: flex; flex-direction: column; align-items: center; gap: 5px; width: 62px; color: #647069; font-size: 10px; text-align: center; line-height: 1.3; }
@@ -188,7 +188,7 @@ html.dark .capability-pill button { background: rgba(255,255,255,.1); }
 html.dark .capability-pill button:hover { background: rgba(255,255,255,.18); }
 
 .condition-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(74px, 1fr)); gap: 8px; margin: 4px 0; }
-.condition-photo-grid a, .condition-photo-grid button { display: block; aspect-ratio: 1; overflow: hidden; padding: 0; border-radius: 6px; border: 1px solid #d4dfd6; background: none; }
+.condition-photo-grid a, .condition-photo-grid button { position: relative; display: block; aspect-ratio: 1; overflow: hidden; padding: 0; border-radius: 6px; border: 1px solid #d4dfd6; background: none; }
 .condition-photo-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .photo-upload-dropzone { display: grid; justify-items: center; gap: 6px; min-height: 160px; margin-bottom: 16px; padding: 30px; border: 2px dashed #b9c7bc; border-radius: 8px; background: #f7f5ef; color: var(--ink); text-align: center; cursor: pointer; }
 .photo-upload-dropzone.compact { min-height: 90px; padding: 16px; margin-bottom: 14px; }

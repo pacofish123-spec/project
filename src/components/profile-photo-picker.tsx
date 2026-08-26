@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+// Aliased — the crop pipeline below also uses the native `new Image()`
+// DOM constructor, which this module-level import would otherwise shadow.
+import NextImage from "next/image";
 import { Camera, Upload, UserCheck } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { useLanguage } from "@/lib/i18n";
@@ -140,7 +143,7 @@ export function ProfilePhotoPicker({ onSaved }: { onSaved?: (url: string) => voi
   return (
     <div className="profile-photo-picker">
       <div className="profile-photo-preview">
-        <span className="host-avatar large">{currentAvatarUrl ? <img src={currentAvatarUrl} alt="" /> : <Camera size={26} />}</span>
+        <span className="host-avatar large">{currentAvatarUrl ? <NextImage src={currentAvatarUrl} alt="" width={56} height={56} /> : <Camera size={26} />}</span>
       </div>
 
       {!cameraOpen && (
