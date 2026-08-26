@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { ArrowLeft, Building2, MessageCircle, User, X } from "lucide-react";
 import { MessageThread } from "@/components/message-thread";
@@ -156,7 +157,7 @@ export function MessagingWidget() {
                 <button className="conversation-row" type="button" key={conversation.booking_id} onClick={() => openConversation(conversation.booking_id)}>
                   <span className="conversation-avatar">
                     {conversation.other_avatar_url
-                      ? <img src={conversation.other_avatar_url} alt="" />
+                      ? <Image src={conversation.other_avatar_url} alt="" width={40} height={40} />
                       : (conversation.other_is_business ? <Building2 size={18} /> : <User size={18} />)}
                   </span>
                   <span className="conversation-meta">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 // Full-screen photo viewer with left/right navigation through a whole
@@ -30,7 +31,9 @@ export function PhotoLightbox({ photos, index, alt, onClose, onNavigate }: { pho
           <ChevronLeft size={28} />
         </button>
       )}
-      <img src={photos[index]} alt={`${alt} — photo ${index + 1} of ${photos.length}`} onClick={(event) => event.stopPropagation()} />
+      <div className="photo-lightbox-frame" onClick={(event) => event.stopPropagation()}>
+        <Image src={photos[index]} alt={`${alt} — photo ${index + 1} of ${photos.length}`} fill sizes="92vw" style={{ objectFit: "contain" }} priority />
+      </div>
       {photos.length > 1 && (
         <button className="photo-lightbox-nav next" type="button" aria-label="Next photo" onClick={(event) => { event.stopPropagation(); onNavigate((index + 1) % photos.length); }}>
           <ChevronRight size={28} />

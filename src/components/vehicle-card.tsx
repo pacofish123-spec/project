@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, CarFront, ShieldCheck, Smartphone, Sparkles, UserRound } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
@@ -42,7 +43,8 @@ export function VehicleCard({ vehicle, rates }: { vehicle: VehicleCardData; rate
 
   return (
     <Link className="vehicle-card" href={`/vehicles/${vehicle.id}`}>
-      <div className={`vehicle-image ${photoUrl ? "" : "vehicle-image-placeholder"}`} style={photoUrl ? { backgroundImage: `url(${photoUrl})` } : undefined}>
+      <div className={`vehicle-image ${photoUrl ? "" : "vehicle-image-placeholder"}`}>
+        {photoUrl && <Image src={photoUrl} alt={`${vehicle.make} ${vehicle.model}`} fill sizes="(max-width: 760px) 100vw, (max-width: 1080px) 50vw, 33vw" style={{ objectFit: "cover" }} />}
         {!photoUrl && <CarFront size={40} />}
         <div className="vehicle-card-badges">
           {/* Three trust badges, each a distinct claim — ID (identity

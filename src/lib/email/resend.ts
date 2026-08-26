@@ -18,7 +18,7 @@ export interface EmailAttachment {
   content: Buffer;
 }
 
-export async function sendEmail(input: { to: string; subject: string; html: string; attachments?: EmailAttachment[] }): Promise<void> {
+export async function sendEmail(input: { to: string; subject: string; html: string; attachments?: EmailAttachment[]; replyTo?: string }): Promise<void> {
   const client = getClient();
   const from = process.env.RESEND_FROM_EMAIL ?? "yoRento <onboarding@resend.dev>";
   const { error } = await client.emails.send({
@@ -26,6 +26,7 @@ export async function sendEmail(input: { to: string; subject: string; html: stri
     to: input.to,
     subject: input.subject,
     html: input.html,
+    replyTo: input.replyTo,
     attachments: input.attachments?.map((attachment) => ({ filename: attachment.filename, content: attachment.content })),
   });
   if (error) throw new Error(`EMAIL_SEND_FAILED: ${error.message}`);

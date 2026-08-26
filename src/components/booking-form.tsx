@@ -224,7 +224,7 @@ export function BookingForm({ vehicleId, status, extras, countryCode }: { vehicl
     }));
 
     setBusy(false);
-    router.push("/trips");
+    router.push(`/trips/${result.booking.id}/confirmed`);
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {

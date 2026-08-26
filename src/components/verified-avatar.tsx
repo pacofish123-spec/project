@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { BadgeCheck, UserRound } from "lucide-react";
 
 // Shared avatar rendering for every place a person's photo shows up
@@ -22,7 +23,7 @@ export function VerifiedAvatar({
 }) {
   return (
     <span className={`host-avatar verified-avatar ${size === "large" ? "large" : ""} ${verified ? "is-verified" : ""}`}>
-      {avatarUrl ? <img src={avatarUrl} alt={alt} /> : <UserRound size={size === "large" ? 30 : 20} />}
+      {avatarUrl ? <Image src={avatarUrl} alt={alt} width={size === "large" ? 56 : 40} height={size === "large" ? 56 : 40} /> : <UserRound size={size === "large" ? 30 : 20} />}
       {verified && (
         <span className="verified-avatar-badge" aria-hidden="true">
           <BadgeCheck size={size === "large" ? 16 : 13} />
