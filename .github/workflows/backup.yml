@@ -42,13 +42,17 @@ jobs:
   backup:
     runs-on: ubuntu-latest
     steps:
-      # Ubuntu's own apt repo only carries postgresql-client 16, and
-      # pg_dump refuses to dump from a newer server than itself —
-      # Supabase runs Postgres 17.x. Pull the client from PGDG (the
-      # official Postgres apt repo) instead, which carries current
-      # major versions. If Supabase ever moves to Postgres 18, bump
-      # postgresql-client-17 below to match (pg_dump's error message
-      # names the exact server version to pin against).
+      # The runner image ships pg_dump 16 at /usr/bin/pg_dump already,
+      # and pg_dump refuses to dump from a newer server than itself —
+      # Supabase runs Postgres 17.x. Installing postgresql-client-17
+      # from PGDG (the official Postgres apt repo) adds a v17 binary
+      # alongside the existing one under /usr/lib/postgresql/17/bin/
+      # rather than replacing /usr/bin/pg_dump, so the dump step below
+      # calls that versioned path directly instead of relying on
+      # whatever plain `pg_dump` resolves to. If Supabase ever moves to
+      # Postgres 18, bump postgresql-client-17 and the path below to
+      # match (pg_dump's error message names the exact server version
+      # to pin against).
       - name: Install matching postgresql-client
         run: |
           sudo apt-get install -y postgresql-common
@@ -64,7 +68,7 @@ jobs:
             echo "::error::SUPABASE_DB_URL secret is not set — see .github/workflows/BACKUP_SETUP.md" >&2
             exit 1
           fi
-          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --format=custom --file=backup.dump
+          /usr/lib/postgresql/17/bin/pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --format=custom --file=backup.dump
 
       - name: Encrypt the dump
         env:
