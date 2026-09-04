@@ -64,6 +64,10 @@ jobs:
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
+          # Secret values pasted from a browser can pick up a trailing
+          # newline without it being visible in the input box — strip
+          # any \r\n wherever it landed rather than trust the paste.
+          SUPABASE_DB_URL="$(printf '%s' "$SUPABASE_DB_URL" | tr -d '\r\n')"
           if [ -z "$SUPABASE_DB_URL" ]; then
             echo "::error::SUPABASE_DB_URL secret is not set — see .github/workflows/BACKUP_SETUP.md" >&2
             exit 1
@@ -74,6 +78,7 @@ jobs:
         env:
           BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
         run: |
+          BACKUP_ENCRYPTION_KEY="$(printf '%s' "$BACKUP_ENCRYPTION_KEY" | tr -d '\r\n')"
           if [ -z "$BACKUP_ENCRYPTION_KEY" ]; then
             echo "::error::BACKUP_ENCRYPTION_KEY secret is not set — see .github/workflows/BACKUP_SETUP.md" >&2
             exit 1
@@ -86,6 +91,8 @@ jobs:
           BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
           BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
         run: |
+          BACKUP_REPO="$(printf '%s' "$BACKUP_REPO" | tr -d '\r\n')"
+          BACKUP_REPO_TOKEN="$(printf '%s' "$BACKUP_REPO_TOKEN" | tr -d '\r\n')"
           if [ -z "$BACKUP_REPO" ] || [ -z "$BACKUP_REPO_TOKEN" ]; then
             echo "::error::BACKUP_REPO / BACKUP_REPO_TOKEN secret is not set — see .github/workflows/BACKUP_SETUP.md" >&2
             exit 1
