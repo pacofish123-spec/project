@@ -1,0 +1,97 @@
+name: Nightly database backup
+
+# yoRento runs on Supabase's Free plan, which has no automated backups
+# (confirmed on the dashboard's Database > Backups page — nothing
+# listed there). This is the replacement: a full pg_dump of the
+# Supabase Postgres database, GPG-encrypted, pushed to a *separate
+# private* repo every night.
+#
+# It does NOT land anywhere in this repo. This repo is public
+# (github.com/pacofish123-spec/project) and the dump contains real
+# PII — renter/host profiles, payment_records, verification_records,
+# messages — so it goes to BACKUP_REPO instead, which must be private.
+#
+# One-time setup (see BACKUP_SETUP.md next to this file):
+#   1. Create a private GitHub repo to hold the dumps.
+#   2. Add these secrets on THIS repo (Settings > Secrets and
+#      variables > Actions):
+#        SUPABASE_DB_URL     - Postgres *direct* connection string
+#                               (Supabase dashboard > Project Settings
+#                               > Database > Connection string > URI,
+#                               the "Direct connection" one, not the
+#                               transaction pooler — pg_dump needs a
+#                               real session).
+#        BACKUP_ENCRYPTION_KEY - a random passphrase you generate once
+#                               and keep somewhere safe; without it a
+#                               backup can't be decrypted, including by
+#                               you.
+#        BACKUP_REPO_TOKEN   - a fine-grained GitHub PAT scoped only to
+#                               the private repo above, Contents:
+#                               Read and write.
+#        BACKUP_REPO         - "yourname/your-private-backups-repo"
+
+on:
+  schedule:
+    # 09:00 UTC = ~05:00 in Santo Domingo (AST, UTC-4) — off-peak for a
+    # DR-based rental marketplace. Cron minute is offset from :00 on
+    # purpose; GitHub throttles jobs scheduled exactly on the hour.
+    - cron: "7 9 * * *"
+  workflow_dispatch: {} # lets you trigger a run by hand to test setup
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install matching postgresql-client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Dump the database
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ]; then
+            echo "::error::SUPABASE_DB_URL secret is not set — see .github/workflows/BACKUP_SETUP.md" >&2
+            exit 1
+          fi
+          pg_dump "$SUPABASE_DB_URL" --no-owner --no-privileges --format=custom --file=backup.dump
+
+      - name: Encrypt the dump
+        env:
+          BACKUP_ENCRYPTION_KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+        run: |
+          if [ -z "$BACKUP_ENCRYPTION_KEY" ]; then
+            echo "::error::BACKUP_ENCRYPTION_KEY secret is not set — see .github/workflows/BACKUP_SETUP.md" >&2
+            exit 1
+          fi
+          gpg --batch --yes --passphrase "$BACKUP_ENCRYPTION_KEY" --symmetric --cipher-algo AES256 -o backup.dump.gpg backup.dump
+          rm backup.dump
+
+      - name: Push the encrypted dump to the private backups repo
+        env:
+          BACKUP_REPO: ${{ secrets.BACKUP_REPO }}
+          BACKUP_REPO_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+        run: |
+          if [ -z "$BACKUP_REPO" ] || [ -z "$BACKUP_REPO_TOKEN" ]; then
+            echo "::error::BACKUP_REPO / BACKUP_REPO_TOKEN secret is not set — see .github/workflows/BACKUP_SETUP.md" >&2
+            exit 1
+          fi
+
+          stamp=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+          git clone "https://x-access-token:${BACKUP_REPO_TOKEN}@github.com/${BACKUP_REPO}.git" backups-repo
+          mkdir -p backups-repo/dumps
+          mv backup.dump.gpg "backups-repo/dumps/yorento-${stamp}.dump.gpg"
+
+          cd backups-repo
+          git config user.name "yorento-backup-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add "dumps/yorento-${stamp}.dump.gpg"
+
+          # Retention: keep the 30 most recent nightly dumps, drop the
+          # rest, so the repo doesn't grow unbounded. Restore needs
+          # exactly one of these files plus BACKUP_ENCRYPTION_KEY.
+          ls -1t dumps/*.dump.gpg | tail -n +31 | xargs -r git rm --quiet
+
+          git commit -m "Backup ${stamp}"
+          git push
