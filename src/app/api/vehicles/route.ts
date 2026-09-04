@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireCapability } from "@/lib/authorization";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { attachTrustBadges } from "@/lib/vehicle-verification";
+import { decodeVin } from "@/lib/vin-decode";
 
 interface VehicleInput {
   hostType?: "individual" | "business";
@@ -18,10 +19,12 @@ interface VehicleInput {
   hasAc?: boolean;
   fuelPolicy?: string;
   cleaningPolicy?: string;
+  smokingPolicy?: string;
   amenities?: string[];
   rentalTerms?: string[];
   latitude?: number;
   longitude?: number;
+  vin?: string;
 }
 
 export async function GET(request: Request) {
@@ -37,6 +40,7 @@ export async function GET(request: Request) {
   const maxPrice = searchParams.get("maxPrice");
   const seats = searchParams.get("seats");
   const rentalTerm = searchParams.get("rentalTerm");
+  const sort = searchParams.get("sort");
   try {
     const supabase = await createSupabaseServerClient();
 
@@ -80,11 +84,22 @@ export async function GET(request: Request) {
     if (rentalTerm) query = query.contains("rental_terms", [rentalTerm]);
     if (excludedVehicleIds.length) query = query.not("id", "in", `(${excludedVehicleIds.join(",")})`);
 
-    const { data, error } = await query.order("promoted", { ascending: false }).order("created_at", { ascending: false });
+    // An explicit price sort replaces the default promoted/recent order
+    // outright (rather than stacking on top of it) — "cheapest first"
+    // stops meaning much once promoted listings are pinned above it.
+    query = sort === "price_asc" || sort === "price_desc"
+      ? query.order("daily_price", { ascending: sort === "price_asc" })
+      : query.order("promoted", { ascending: false }).order("created_at", { ascending: false });
+
+    const { data, error } = await query;
     if (error) return NextResponse.json({ error: "Unable to load vehicles." }, { status: 500 });
 
     let vehicles = (data ?? []).map((vehicle) => ({ ...vehicle, distance_km: distanceByVehicle.get(vehicle.id) ?? null }));
-    if (distanceByVehicle.size) {
+    // The near-me distance resort only kicks in when no explicit sort
+    // was chosen — an explicit "price: low to high" pick should win
+    // over the implicit proximity ordering, not be silently overridden
+    // by it.
+    if (distanceByVehicle.size && !sort) {
       vehicles = vehicles
         .filter((vehicle) => vehicle.distance_km !== null)
         .sort((a, b) => (a.distance_km ?? Infinity) - (b.distance_km ?? Infinity));
@@ -126,6 +141,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Verify your ID before listing a vehicle.", code: "IDENTITY_VERIFICATION_REQUIRED" }, { status: 403 });
     }
 
+    // Same idea, for the profile-photo gate (migration 0040) — the
+    // vehicles insert policy enforces this too.
+    const { data: ownerProfile } = await supabase.from("profiles").select("avatar_url").eq("id", user.id).maybeSingle();
+    if (!ownerProfile?.avatar_url) {
+      return NextResponse.json({ error: "Add a profile photo before listing a vehicle.", code: "PROFILE_PHOTO_REQUIRED" }, { status: 403 });
+    }
+
+    // Best-effort — a decode failure or timeout never blocks listing
+    // creation, it just leaves vin_verified false until a later edit
+    // (or NHTSA itself) succeeds. See vin-decode.ts.
+    const vin = body.vin?.trim().toUpperCase() || null;
+    const vinResult = vin
+      ? await decodeVin(vin, { year: body.year, make: body.make, model: body.model, seats: body.seats, transmission: body.transmission })
+      : null;
+
     const { data, error } = await supabase.from("vehicles").insert({
       owner_user_id: user.id,
       business_id: hostType === "business" ? body.businessId : null,
@@ -142,11 +172,16 @@ export async function POST(request: Request) {
       has_ac: body.hasAc ?? false,
       fuel_policy: body.fuelPolicy ?? null,
       cleaning_policy: body.cleaningPolicy ?? null,
+      smoking_policy: body.smokingPolicy ?? "not_allowed",
       amenities: body.amenities ?? [],
       rental_terms: body.rentalTerms ?? [],
       latitude: body.latitude ?? null,
       longitude: body.longitude ?? null,
       status: "draft",
+      vin,
+      vin_verified: vinResult?.verified ?? false,
+      vin_mismatches: vinResult?.mismatches ?? [],
+      vin_decoded_at: vinResult?.ok ? new Date().toISOString() : null,
     }).select().single();
 
     if (error) {

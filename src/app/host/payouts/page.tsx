@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Building2, CheckCircle2, Clock, CreditCard } from "lucide-react";
 import { AppHeader } from "@/components/app-header";
 import { useLanguage } from "@/lib/i18n";
@@ -27,6 +27,12 @@ export default function HostPayoutsPage() {
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState("");
   const [paypalEmail, setPaypalEmail] = useState("");
+  // Set when Stripe rejects the host's country (not every country is a
+  // supported Connect Express account country — Dominican Republic
+  // among them, as of writing) — steers straight to the working PayPal
+  // path instead of leaving the host stuck on a dead Stripe button.
+  const [highlightPaypal, setHighlightPaypal] = useState(false);
+  const paypalEmailRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
     fetch("/api/host/payout-accounts").then(async (response) => {
@@ -51,10 +57,15 @@ export default function HostPayoutsPage() {
   async function startStripeOnboarding() {
     setBusy("stripe");
     setMessage("");
+    setHighlightPaypal(false);
     const response = await fetch("/api/host/payout-accounts/stripe", { method: "POST" });
-    const result = await response.json().catch(() => ({})) as { url?: string; error?: string };
+    const result = await response.json().catch(() => ({})) as { url?: string; error?: string; code?: string };
     if (response.ok && result.url) { window.location.assign(result.url); return; }
     setMessage(result.error ?? t("payoutsLoadError"));
+    if (result.code === "STRIPE_COUNTRY_NOT_SUPPORTED") {
+      setHighlightPaypal(true);
+      paypalEmailRef.current?.focus();
+    }
     setBusy("");
   }
 
@@ -91,14 +102,15 @@ export default function HostPayoutsPage() {
               </button>
             </div>
 
-            <div className="dashboard-tile" style={{ cursor: "default" }}>
+            <div className={`dashboard-tile ${highlightPaypal ? "payout-tile-highlighted" : ""}`} style={{ cursor: "default" }}>
               <Building2 size={22} />
               <strong>PayPal</strong>
+              {highlightPaypal && <span className="payout-highlight-note">{t("payoutsPaypalRecommendedNote")}</span>}
               {paypalAccount ? (
                 <span><CheckCircle2 size={13} style={{ verticalAlign: "-2px", marginRight: 4 }} />{paypalAccount.external_account_id}</span>
               ) : (
                 <>
-                  <input className="location-search" style={{ marginTop: 8 }} type="email" placeholder={t("payoutsPaypalEmailPlaceholder")} value={paypalEmail} onChange={(event) => setPaypalEmail(event.target.value)} />
+                  <input ref={paypalEmailRef} className="location-search" style={{ marginTop: 8 }} type="email" placeholder={t("payoutsPaypalEmailPlaceholder")} value={paypalEmail} onChange={(event) => setPaypalEmail(event.target.value)} />
                   <button className="workflow-submit coral" type="button" disabled={busy === "paypal" || !paypalEmail.trim()} onClick={savePaypalEmail} style={{ marginTop: 8 }}>
                     {busy === "paypal" ? t("paymentStarting") : t("payoutsSave")}
                   </button>

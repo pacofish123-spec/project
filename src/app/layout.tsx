@@ -8,6 +8,7 @@ import { PageViewTracker } from "@/components/page-view-tracker";
 import { MobileNav } from "@/components/mobile-nav";
 import { SiteFooter } from "@/components/site-footer";
 import { MessagingWidget } from "@/components/messaging-widget";
+import { CookieBanner } from "@/components/cookie-banner";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 import { LanguageProvider } from "@/lib/i18n";
 import { detectLanguageFromAcceptHeader } from "@/lib/detect-language";
@@ -30,6 +31,21 @@ export const metadata: Metadata = {
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "yoRento" },
   formatDetection: { telephone: false },
   other: { "mobile-web-app-capable": "yes" },
+  // Explicit here (rather than relying on Next to infer it purely from
+  // the opengraph-image file convention) so link-preview bots always
+  // get a title/description/site name even on pages that only inherit
+  // the root's image. Per-page metadata below still overrides these.
+  openGraph: {
+    title: "yoRento | Your next journey starts here",
+    description: "A trusted vehicle marketplace born in the Dominican Republic.",
+    siteName: "yoRento",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "yoRento | Your next journey starts here",
+    description: "A trusted vehicle marketplace born in the Dominican Republic.",
+  },
 };
 
 export const viewport: Viewport = {
@@ -54,4 +70,5 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const initialLanguage = detectLanguageFromAcceptHeader(acceptLanguage);
 
   return <html lang={initialLanguage} className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider initialLanguage={initialLanguage}><ServiceWorkerRegister /><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /><MessagingWidget /></LanguageProvider></ThemeProvider><Analytics /></body></html>;
+  return <html lang={initialLanguage} className="h-full" data-scroll-behavior="smooth" suppressHydrationWarning><body className="min-h-full"><ThemeProvider><LanguageProvider initialLanguage={initialLanguage}><ServiceWorkerRegister /><PageViewTracker /><PageTransition>{children}</PageTransition><SiteFooter /><MobileNav /><MessagingWidget /><CookieBanner /></LanguageProvider></ThemeProvider></body></html>;
 }

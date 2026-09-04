@@ -30,6 +30,12 @@ export async function POST() {
     const message = error instanceof Error ? error.message : "REQUEST_FAILED";
     if (message === "AUTHENTICATION_REQUIRED") return NextResponse.json({ error: "Sign in is required." }, { status: 401 });
     if (message === "STRIPE_NOT_CONFIGURED") return NextResponse.json({ error: "Stripe payouts aren't configured yet." }, { status: 400 });
+    if (message === "STRIPE_COUNTRY_NOT_SUPPORTED") {
+      return NextResponse.json({
+        error: "Stripe doesn't support payouts to your country yet — use PayPal below instead.",
+        code: "STRIPE_COUNTRY_NOT_SUPPORTED",
+      }, { status: 400 });
+    }
     return NextResponse.json({ error: "Unable to start Stripe onboarding." }, { status: 500 });
   }
 }

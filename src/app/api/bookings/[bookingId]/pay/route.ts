@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/authorization";
 import { getPaymentProvider } from "@/lib/payments";
 import { getSiteUrl } from "@/lib/site-url";
 import { convertApprox } from "@/lib/currency";
+import { markPaymentRecordFailed } from "@/lib/mark-payment-failed";
 
 // Creates a pending payment_records row (amount/currency come straight
 // off the booking — never trusted from the client) via
@@ -56,19 +57,31 @@ export async function POST(request: Request, { params }: { params: Promise<{ boo
       checkoutCurrency = "USD";
     }
 
-    const session = await provider.createCheckoutSession({
-      paymentRecordId: paymentRecord.id,
-      bookingId,
-      amount: checkoutAmount,
-      currency: checkoutCurrency,
-      description: checkoutCurrency === booking.currency
-        ? `yoRento rental — ${vehicleLabel || "your booking"}`
-        : `yoRento rental — ${vehicleLabel || "your booking"} (${booking.currency} ${Number(booking.total).toFixed(2)})`,
-      successUrl: provider.id === "paypal"
-        ? `${siteUrl}/api/bookings/${bookingId}/pay/paypal-return?payment_record_id=${paymentRecord.id}`
-        : `${siteUrl}/trips?paid=1`,
-      cancelUrl: `${siteUrl}/trips?paid=0`,
-    });
+    let session;
+    try {
+      session = await provider.createCheckoutSession({
+        paymentRecordId: paymentRecord.id,
+        bookingId,
+        amount: checkoutAmount,
+        currency: checkoutCurrency,
+        description: checkoutCurrency === booking.currency
+          ? `yoRento rental — ${vehicleLabel || "your booking"}`
+          : `yoRento rental — ${vehicleLabel || "your booking"} (${booking.currency} ${Number(booking.total).toFixed(2)})`,
+        successUrl: provider.id === "paypal"
+          ? `${siteUrl}/api/bookings/${bookingId}/pay/paypal-return?payment_record_id=${paymentRecord.id}`
+          : `${siteUrl}/trips?paid=1`,
+        cancelUrl: `${siteUrl}/trips?paid=0`,
+      });
+    } catch (providerError) {
+      // create_pending_payment's own ALREADY_PAID guard only looks at
+      // status='paid', so a stray 'pending' row here doesn't actually
+      // block a retry the way it does for deposit/waiver (see
+      // mark-payment-failed.ts) — this is just hygiene, so the payments
+      // table doesn't accumulate dead 'pending' rows from failed
+      // checkout-session attempts.
+      await markPaymentRecordFailed(paymentRecord.id);
+      throw providerError;
+    }
 
     return NextResponse.json({ redirectUrl: session.redirectUrl });
   } catch (error) {

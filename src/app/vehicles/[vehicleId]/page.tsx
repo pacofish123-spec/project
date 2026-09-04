@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/app-header";
 import { VehicleDetailClient, type Vehicle, type HostSummary } from "@/components/vehicle-detail-client";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/format";
+import { attachTrustBadges } from "@/lib/vehicle-verification";
 
 interface PageProps {
   params: Promise<{ vehicleId: string }>;
@@ -14,15 +15,10 @@ async function loadVehicle(vehicleId: string): Promise<Vehicle | null> {
   const { data, error } = await supabase.from("vehicles").select("*").eq("id", vehicleId).maybeSingle();
   if (error || !data) return null;
 
-  const { data: verificationRecord } = await supabase
-    .from("verification_records")
-    .select("id")
-    .eq("vehicle_id", vehicleId)
-    .eq("verification_type", "vehicle")
-    .eq("status", "verified")
-    .maybeSingle();
-
-  return { ...data, verified: Boolean(verificationRecord) } as Vehicle;
+  // Same three-badge attach the search/homepage listings use (0045) —
+  // the detail page should never show a badge the card didn't.
+  const [withBadges] = await attachTrustBadges(supabase, [data]);
+  return withBadges as Vehicle;
 }
 
 async function loadHostSummary(ownerUserId: string): Promise<HostSummary | null> {

@@ -40,22 +40,37 @@ export default function DestinationsPage() {
             <h1>{t("whereWillYouGoLine1")} <em>{t("whereWillYouGoLine2")}</em></h1>
             <p>{t("searchIntro")}</p>
           </section>
+          {/* Every curated destination always renders, even with zero
+              active listings yet — collapsing to a blank page the
+              moment supply is thin (which is most of the time this
+              early) taught a visitor there was nothing here at all,
+              rather than nothing here *yet*. Inactive cities stay
+              visible, muted, with a host CTA instead of a link. */}
+          <div className="destination-tile-grid">
+            {drDestinations.map((destination) => {
+              const isActive = activeCities?.has(normalizeCityName(destination.name)) ?? false;
+              if (!isActive) {
+                return (
+                  <div className="destination-tile destination-tile-inactive" key={destination.name} style={{ backgroundImage: `url(${destination.photo})` }}>
+                    <span>{destination.name}</span>
+                    <span className="destination-tile-inactive-badge">{t("destinationComingSoon")}</span>
+                  </div>
+                );
+              }
+              return (
+                <Link className="destination-tile" href={`/destinations/${slugifyDestination(destination.name)}`} key={destination.name} style={{ backgroundImage: `url(${destination.photo})` }}>
+                  <span>{destination.name}</span>
+                  <ArrowRight size={15} />
+                </Link>
+              );
+            })}
+          </div>
           {activeCities && visibleDestinations.length === 0 && (
             <div className="empty-results compact">
               <MapPin size={30} />
               <h2>{t("destinationsEmptyTitle")}</h2>
               <p>{t("destinationsEmptyBody")}</p>
               <Link className="workflow-link" href="/host">{t("becomeAHost")} <ArrowRight size={15} /></Link>
-            </div>
-          )}
-          {visibleDestinations.length > 0 && (
-            <div className="destination-tile-grid">
-              {visibleDestinations.map((destination) => (
-                <Link className="destination-tile" href={`/destinations/${slugifyDestination(destination.name)}`} key={destination.name} style={{ backgroundImage: `url(${destination.photo})` }}>
-                  <span>{destination.name}</span>
-                  <ArrowRight size={15} />
-                </Link>
-              ))}
             </div>
           )}
         </div>

@@ -2,15 +2,18 @@
 
 import Link from "next/link";
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import { Car, MapPinned, Ticket } from "lucide-react";
 import { SearchPanel } from "@/components/search-panel";
 import { VehicleCard, type VehicleCardData } from "@/components/vehicle-card";
 import { useLanguage } from "@/lib/i18n";
 import { useCurrencyRates } from "@/lib/use-currency-rates";
 import type { Destination } from "@/lib/destinations";
+import { findDestinationGuidance } from "@/lib/destination-guidance";
 
 export function DestinationDetailClient({ destination, vehicles }: { destination: Destination; vehicles: VehicleCardData[] }) {
   const { t } = useLanguage();
   const rates = useCurrencyRates();
+  const guidance = findDestinationGuidance(destination.name);
 
   return (
     <main className="workflow-page">
@@ -23,6 +26,18 @@ export function DestinationDetailClient({ destination, vehicles }: { destination
         </section>
 
         <div className="destination-detail-search"><SearchPanel initialLocation={destination.name} /></div>
+
+        {guidance && (
+          <section className="destination-guidance-card">
+            <p className="workflow-kicker">{t("destinationGuidanceTitle")}</p>
+            <div className="destination-guidance-grid">
+              <div><Car size={17} /><strong>{t("destinationGuidanceVehicle")}</strong><span>{guidance.vehicleAdvice}</span></div>
+              <div><Ticket size={17} /><strong>{t("destinationGuidanceTolls")}</strong><span>{guidance.tollNote}</span></div>
+              <div><MapPinned size={17} /><strong>{t("destinationGuidanceDriveTime")}</strong><span>{guidance.driveTimeNote}</span></div>
+            </div>
+            <p className="admin-row-meta">{t("destinationGuidanceDisclaimer")}</p>
+          </section>
+        )}
 
         {vehicles.length > 0 ? (
           <div className="vehicle-grid">{vehicles.map((vehicle) => <VehicleCard vehicle={vehicle} rates={rates} key={vehicle.id} />)}</div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { ChevronDown, ChevronUp, ShieldCheck } from "lucide-react";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -21,6 +22,7 @@ interface VerificationVehicle {
   has_ac?: boolean;
   fuel_policy?: string | null;
   cleaning_policy?: string | null;
+  smoking_policy?: string | null;
   amenities?: string[] | null;
   photo_paths?: string[] | null;
 }
@@ -63,7 +65,7 @@ function VehicleBreakdown({ vehicle }: { vehicle: VerificationVehicle }) {
     <div className="admin-vehicle-breakdown">
       {photos.length > 0 ? (
         <div className="condition-photo-grid">
-          {photos.map((path, index) => <a href={vehiclePhotoUrl(path)} target="_blank" rel="noreferrer" key={path}><img src={vehiclePhotoUrl(path)} alt={`${vehicle.make} ${vehicle.model} photo ${index + 1}`} /></a>)}
+          {photos.map((path, index) => <a href={vehiclePhotoUrl(path)} target="_blank" rel="noreferrer" key={path}><Image src={vehiclePhotoUrl(path)} alt={`${vehicle.make} ${vehicle.model} photo ${index + 1}`} fill sizes="120px" style={{ objectFit: "cover" }} /></a>)}
         </div>
       ) : (
         <p className="admin-row-meta">No photos uploaded yet.</p>
@@ -76,6 +78,7 @@ function VehicleBreakdown({ vehicle }: { vehicle: VerificationVehicle }) {
         {vehicle.has_ac && <span>A/C</span>}
         {vehicle.fuel_policy && <span>Fuel: {vehicle.fuel_policy.replace("_", " ")}</span>}
         {vehicle.cleaning_policy && <span>Cleaning: {vehicle.cleaning_policy.replace(/_/g, " ")}</span>}
+        {vehicle.smoking_policy && <span>Smoking: {vehicle.smoking_policy.replace(/_/g, " ")}</span>}
       </div>
       {vehicle.amenities && vehicle.amenities.length > 0 && (
         <div className="admin-reasons">

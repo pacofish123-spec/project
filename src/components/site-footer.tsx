@@ -21,6 +21,7 @@ export function SiteFooter() {
           <Link href="/trust">{t("trustSafety")}</Link>
           <Link href="/privacy">{t("privacyPolicyLink")}</Link>
           <Link href="/terms">{t("termsOfServiceLink")}</Link>
+          <Link href="/contact">{t("contactUsLink")}</Link>
           <LanguageSwitcher />
         </div>
       </div>

@@ -4,9 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { CarFront } from "lucide-react";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatMoney } from "@/lib/format";
+import { AdminIdChip, AdminSearchBar } from "@/components/admin-search-bar";
 
 interface AdminVehicle {
   id: string;
+  owner_user_id: string;
   make: string;
   model: string;
   year: number;
@@ -35,6 +37,7 @@ export default function AdminVehiclesPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<(typeof filters)[number]>("all");
   const [busyId, setBusyId] = useState("");
+  const [query, setQuery] = useState("");
 
   function load() {
     fetch("/api/admin/vehicles").then(async (response) => {
@@ -65,11 +68,22 @@ export default function AdminVehiclesPage() {
     setBusyId("");
   }
 
-  const visible = useMemo(() => (vehicles ?? []).filter((vehicle) => filter === "all" || vehicle.status === filter), [vehicles, filter]);
+  const statusFiltered = useMemo(() => (vehicles ?? []).filter((vehicle) => filter === "all" || vehicle.status === filter), [vehicles, filter]);
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return statusFiltered;
+    return statusFiltered.filter((vehicle) =>
+      vehicle.id.toLowerCase().includes(needle)
+      || vehicle.owner_user_id.toLowerCase().includes(needle)
+      || vehicle.owner_display_name.toLowerCase().includes(needle)
+      || vehicle.make.toLowerCase().includes(needle)
+      || vehicle.model.toLowerCase().includes(needle));
+  }, [statusFiltered, query]);
 
   return (
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">All vehicles ({vehicles?.length ?? 0})</p>
+      <AdminSearchBar value={query} onChange={setQuery} placeholder="Search by car id, owner name/id, make, or model…" resultCount={visible.length} totalCount={statusFiltered.length} />
       <div className="admin-filters">
         {filters.map((option) => (
           <button key={option} className={filter === option ? "active" : ""} type="button" onClick={() => setFilter(option)}>{option.replace("_", " ")}</button>
@@ -87,7 +101,7 @@ export default function AdminVehiclesPage() {
                 <span className={`trip-status trip-status-${vehicle.status}`}>{vehicle.status.replace("_", " ")}</span>
               </div>
               <p className="admin-row-meta">
-                {vehicle.host_type === "business" ? vehicle.businesses?.name ?? "Business" : vehicle.owner_display_name} · {vehicle.location_city}, {vehicle.country_code} · {formatMoney(vehicle.daily_price, vehicle.base_currency)}/day
+                {vehicle.host_type === "business" ? vehicle.businesses?.name ?? "Business" : vehicle.owner_display_name} · {vehicle.location_city}, {vehicle.country_code} · {formatMoney(vehicle.daily_price, vehicle.base_currency)}/day · <AdminIdChip id={vehicle.id} />
               </p>
               <div className="trip-footer">
                 <div className="trip-actions">

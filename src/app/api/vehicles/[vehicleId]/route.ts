@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser } from "@/lib/authorization";
+import { decodeVin } from "@/lib/vin-decode";
+import { attachTrustBadges } from "@/lib/vehicle-verification";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ vehicleId: string }> }) {
   try {
@@ -9,15 +11,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ veh
     const { data, error } = await supabase.from("vehicles").select("*").eq("id", vehicleId).maybeSingle();
     if (error || !data) return NextResponse.json({ error: "Vehicle not found." }, { status: 404 });
 
-    const { data: verificationRecord } = await supabase
-      .from("verification_records")
-      .select("id")
-      .eq("vehicle_id", vehicleId)
-      .eq("verification_type", "vehicle")
-      .eq("status", "verified")
-      .maybeSingle();
+    // Same three-badge attach used everywhere a vehicle is listed
+    // (search, homepage, destinations) — the detail page should never
+    // claim a badge the card didn't.
+    const [withBadges] = await attachTrustBadges(supabase, [data]);
 
-    return NextResponse.json({ vehicle: { ...data, verified: Boolean(verificationRecord) } });
+    return NextResponse.json({ vehicle: withBadges });
   } catch {
     return NextResponse.json({ error: "Unable to load vehicle." }, { status: 500 });
   }
@@ -36,11 +35,13 @@ interface VehiclePatchInput {
   hasAc?: boolean;
   fuelPolicy?: string;
   cleaningPolicy?: string;
+  smokingPolicy?: string;
   amenities?: string[];
   rentalTerms?: string[];
   photoPaths?: string[];
   latitude?: number;
   longitude?: number;
+  vin?: string;
   // Only ever "paused" or "archived" here — going live requires the
   // verification-gated publish_vehicle RPC, not a plain field edit.
   status?: "draft" | "paused" | "archived";
@@ -73,6 +74,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ve
     if (body.hasAc !== undefined) update.has_ac = body.hasAc;
     if (body.fuelPolicy !== undefined) update.fuel_policy = body.fuelPolicy;
     if (body.cleaningPolicy !== undefined) update.cleaning_policy = body.cleaningPolicy;
+    if (body.smokingPolicy !== undefined) update.smoking_policy = body.smokingPolicy;
     if (body.amenities !== undefined) update.amenities = body.amenities;
     if (body.rentalTerms !== undefined) update.rental_terms = body.rentalTerms;
     if (body.photoPaths !== undefined) update.photo_paths = body.photoPaths;
@@ -81,6 +83,32 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ ve
     if (body.status !== undefined) {
       if (!PATCHABLE_STATUSES.includes(body.status)) return NextResponse.json({ error: "Invalid status." }, { status: 400 });
       update.status = body.status;
+    }
+    if (body.vin !== undefined) {
+      const vin = body.vin?.trim().toUpperCase() || null;
+      update.vin = vin;
+      if (vin) {
+        // A VIN can be added/changed independently of the other fields
+        // in this same PATCH — pull whatever isn't in this body from
+        // the current row so the comparison is against the listing as
+        // it will actually read once this save lands.
+        const { data: current } = await supabase.from("vehicles").select("year, make, model, seats, transmission").eq("id", vehicleId).maybeSingle();
+        const claim = {
+          year: (update.year as number | undefined) ?? current?.year,
+          make: (update.make as string | undefined) ?? current?.make,
+          model: (update.model as string | undefined) ?? current?.model,
+          seats: (update.seats as number | undefined) ?? current?.seats,
+          transmission: (update.transmission as string | undefined) ?? current?.transmission,
+        };
+        const vinResult = claim.year && claim.make && claim.model ? await decodeVin(vin, claim as { year: number; make: string; model: string; seats?: number | null; transmission?: string | null }) : null;
+        update.vin_verified = vinResult?.verified ?? false;
+        update.vin_mismatches = vinResult?.mismatches ?? [];
+        update.vin_decoded_at = vinResult?.ok ? new Date().toISOString() : null;
+      } else {
+        update.vin_verified = false;
+        update.vin_mismatches = [];
+        update.vin_decoded_at = null;
+      }
     }
     if (Object.keys(update).length === 0) return NextResponse.json({ error: "Nothing to update." }, { status: 400 });
 

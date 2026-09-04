@@ -1,20 +1,92 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Ban, RotateCcw, ShieldCheck, Trash2, Users, X } from "lucide-react";
+import { Ban, ChevronDown, ChevronUp, RotateCcw, ShieldCheck, Trash2, Users, X } from "lucide-react";
 import { SkeletonCards } from "@/components/skeleton";
 import { formatDate } from "@/lib/format";
+import { AdminIdChip, AdminSearchBar } from "@/components/admin-search-bar";
+import { VerifiedAvatar } from "@/components/verified-avatar";
 import type { Capability } from "@/lib/domain";
 
 interface AdminUser {
   id: string;
   email: string;
   display_name: string;
+  avatar_url: string | null;
+  phone: string | null;
+  date_of_birth: string | null;
   country_code: string;
   account_type: string;
   member_since: string;
   status: "active" | "suspended" | "deleted";
   capabilities: string[];
+}
+
+interface IdentityDetail {
+  status: string;
+  provider?: string | null;
+  createdAt?: string;
+  documentUrls?: string[];
+  stripeExtract?: {
+    firstName: string | null;
+    lastName: string | null;
+    dob: string | null;
+    documentType: string | null;
+    documentNumber: string | null;
+    issuingCountry: string | null;
+    expirationDate: string | null;
+  } | null;
+  error?: string;
+}
+
+// The admin mini-profile — phone/DOB/avatar are already on the row from
+// admin_list_users (migration 0040); identity detail (document photos
+// for a manual review, or the extracted fields Stripe's API exposes for
+// an automated one) is fetched lazily, once, the first time a row expands.
+function UserMiniProfile({ user }: { user: AdminUser }) {
+  const [identity, setIdentity] = useState<IdentityDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/admin/users/${user.id}/identity`).then(async (response) => {
+      setIdentity(await response.json().catch(() => null) as IdentityDetail | null);
+      setLoading(false);
+    }).catch(() => setLoading(false));
+  }, [user.id]);
+
+  return (
+    <div className="admin-mini-profile">
+      <div className="admin-mini-profile-head">
+        <VerifiedAvatar avatarUrl={user.avatar_url} verified={identity?.status === "verified"} size="large" />
+        <div>
+          <strong>{user.display_name || "—"}</strong>
+          <p className="admin-row-meta">{user.phone || "no phone on file"} · {user.date_of_birth ? `DOB ${formatDate(user.date_of_birth)}` : "no DOB on file"}</p>
+        </div>
+      </div>
+      {loading && <p className="admin-row-meta">Loading ID verification…</p>}
+      {!loading && identity && (
+        <>
+          {identity.status === "not_started" && <p className="admin-row-meta">No ID verification requested yet.</p>}
+          {identity.error && <p className="admin-row-meta">{identity.error}</p>}
+          {identity.stripeExtract && (
+            <div className="admin-reasons">
+              <span>{identity.stripeExtract.firstName} {identity.stripeExtract.lastName}</span>
+              {identity.stripeExtract.dob && <span>DOB {identity.stripeExtract.dob}</span>}
+              {identity.stripeExtract.documentType && <span>{identity.stripeExtract.documentType.replace(/_/g, " ")}</span>}
+              {identity.stripeExtract.documentNumber && <span>Doc# {identity.stripeExtract.documentNumber}</span>}
+              {identity.stripeExtract.issuingCountry && <span>{identity.stripeExtract.issuingCountry}</span>}
+              {identity.stripeExtract.expirationDate && <span>Expires {identity.stripeExtract.expirationDate}</span>}
+            </div>
+          )}
+          {identity.documentUrls && identity.documentUrls.length > 0 && (
+            <div className="condition-photo-grid">
+              {identity.documentUrls.map((url) => <a href={url} target="_blank" rel="noreferrer" key={url}><img src={url} alt="ID document" /></a>)}
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
 
 const allCapabilities: Capability[] = [
@@ -45,6 +117,7 @@ export default function AdminDirectoryPage() {
   const [pendingGrant, setPendingGrant] = useState<Record<string, Capability | "">>({});
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
+  const [expandedId, setExpandedId] = useState("");
 
   function load() {
     fetch("/api/admin/users").then(async (response) => {
@@ -62,7 +135,12 @@ export default function AdminDirectoryPage() {
     if (!users) return [];
     const needle = query.trim().toLowerCase();
     if (!needle) return users;
-    return users.filter((user) => user.display_name.toLowerCase().includes(needle) || user.email.toLowerCase().includes(needle));
+    return users.filter((user) =>
+      user.display_name.toLowerCase().includes(needle)
+      || user.email.toLowerCase().includes(needle)
+      || user.id.toLowerCase().includes(needle)
+      || (user.phone ?? "").toLowerCase().includes(needle)
+      || (user.date_of_birth ?? "").includes(needle));
   }, [users, query]);
 
   async function grant(userId: string) {
@@ -100,7 +178,7 @@ export default function AdminDirectoryPage() {
   return (
     <section className="workflow-card wide requests-card">
       <p className="workflow-kicker">Users ({visible.length}{query ? ` of ${users?.length ?? 0}` : ""})</p>
-      <input className="location-search user-search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search by name or email…" aria-label="Search users" />
+      <AdminSearchBar value={query} onChange={setQuery} placeholder="Search by name, email, id, phone, or DOB…" resultCount={visible.length} totalCount={users?.length ?? 0} />
       {loading && <SkeletonCards />}
       {!loading && message && <div className="dashboard-message"><Users size={22} /><p>{message}</p></div>}
       {error && <p className="workflow-error">{error}</p>}
@@ -116,7 +194,11 @@ export default function AdminDirectoryPage() {
                   <strong>{user.display_name || "—"}</strong>
                   <span className={`trip-status ${statusClass[user.status]}`}>{user.status}</span>
                 </div>
-                <p className="admin-row-meta">{user.email} · {user.country_code} · {user.account_type} · member since {formatDate(user.member_since)}</p>
+                <p className="admin-row-meta">{user.email} · {user.country_code} · {user.account_type} · member since {formatDate(user.member_since)} · <AdminIdChip id={user.id} /></p>
+                <button className="workflow-link" type="button" onClick={() => setExpandedId(expandedId === user.id ? "" : user.id)}>
+                  {expandedId === user.id ? <ChevronUp size={13} style={{ verticalAlign: "-2px" }} /> : <ChevronDown size={13} style={{ verticalAlign: "-2px" }} />} {expandedId === user.id ? "Hide mini profile" : "View mini profile"}
+                </button>
+                {expandedId === user.id && <UserMiniProfile user={user} />}
                 <div className="admin-reasons">
                   {user.capabilities.length === 0 && <span>no capabilities</span>}
                   {user.capabilities.map((capability) => (
